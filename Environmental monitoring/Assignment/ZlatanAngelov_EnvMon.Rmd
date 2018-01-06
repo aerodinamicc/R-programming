@@ -1,0 +1,227 @@
+---
+title: Environmental monitoring and data analysis report
+author: Report by Zlatan Angelov, Lectured by Dr. Chrstian Schunk and Dr. Christian Zang
+date: 31.03.2017
+output: 
+    html_document:
+        toc: true
+        fig_caption: true
+---
+<style type = "text/css">
+body { 
+    font-family: "Times New Roman", serif;
+    font-size: 12pt;
+}
+</style>
+
+
+# Part 1: California drought monitoring
+
+## Introduction
+
+  The following document uses the data provided by the U.S. Drought Agency to explore the temporal development of individual drought classes over the state of California, USA for the period 2000 - 2016. The U.S. Drought Monitor is the drought map that policymakers and media use in discussions of drought and in allocating drought relief.
+
+  The Drought Monitor labels droughts by intensity, with D1 being the least intense and D4 being the most intense. D0, drought watch areas, are either drying out and possibly heading for drought, or are recovering from drought but not yet back to normal, suffering long-term impacts such as low  reservoir levels.
+
+  For further information please check the  [link](http://droughtmonitor.unl.edu/AboutUs/ClassificationScheme.aspx) or the following image taken from the USDA's website:
+  ![Severity indices](severityIndices.png)
+
+## Data
+
+  Initially the packages needed for further operations are loaded:
+```{r echo=TRUE, eval = FALSE}
+library(tidyverse)
+library(lubridate)
+```
+
+  The working directory is then set:
+```{r echo = TRUE, eval = TRUE}
+setwd("E:/R/EnvMon/assignment")
+```
+
+  The Drought MOnitoring website supports the download of only 5year period at a time. Since the researche period is 16 years long **(04.01.2000 - 17.01.2017)** the data is downloaded into several files which are further going to be joined. The following code creates a list of ".csv" files present in the working directory, reads them and binds them creating an extended dataset covering the whole 16 year period:
+```{r echo=TRUE, eval = FALSE}
+lst <- dir(pattern = ".csv")
+x1 <- read_csv(lst[1], col_types = cols(ReleaseDate = col_date(format = "%Y%m%d")))
+x2 <- read_csv(lst[2], col_types = cols(ReleaseDate = col_date(format = "%Y%m%d"))) 
+x3 <- read_csv(lst[3], col_types = cols(ReleaseDate = col_date(format = "%Y%m%d")))
+x4 <- read_csv(lst[4], col_types = cols(ReleaseDate = col_date(format = "%Y%m%d")))
+dat <-rbind(x1, x2, x3, x4)
+```
+
+  The data is then ordered chronologically, making use of the fact that the "ReleaseDate" column has been directly recognized as date. Nextly, columns are created (mutate) with day, month and year information of the measurement taken:
+```{r echo = TRUE, eval = FALSE}
+dat <- dat[order(dat$ReleaseDate),]
+
+dat <- dat %>% mutate(month = month(ymd(dat$ReleaseDate))) %>%
+                mutate(day = day(ymd(dat$ReleaseDate))) %>%
+                mutate(year = year(ymd(dat$ReleaseDate)))
+```
+
+
+  The following row (excluding the day, month, year information) represents the organization of the data:
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+dat[79,1:8]
+```
+  The columns "None" and "D0" always sum up to 100%. Afterwards all other drought classes build upon each other, as with line 79 (57.98% of the total territory of the state experiences D0 drought, 27.59% - at least D1 drought, 18.48% - at least D2 drought, 4.72% - extreme).
+
+## Analysis
+
+  The graph below gives an impression of the distribution of the different drought classes over the whole period in terms of their territorial extent:
+```{r echo = TRUE, eval = TRUE}
+dat %>% gather(drought, perc, D0:D4) %>%
+  ggplot() +
+  geom_density(aes(x = perc, colour = drought))
+```
+  
+  As shown by the graph above, the extreme or exceptional droughts are not a widespread phenomenon. Nevertheless when they occur, such events have the potential to affect a significant part of the state.  
+  The distribution of both exceptional and extreme drought classes is skewed towards 0. This is observed due to the majority of such values measured over the 16 years period. This suggestion is further reinforced by the following boxplots and the long term median values of the classes:
+```{r echo = TRUE, eval = TRUE}
+dat %>% gather(drought, perc, D0:D4) %>%
+  ggplot() +
+geom_boxplot(aes(x = drought,
+                 y = perc,
+                 colour = drought))
+```
+
+  Nextly, the temporal pattern of each drought level is displayed in a separate facet. It could be noticed that since 2014 severe and extreme droughts have been experienced (to a different territorial extent) throughout the all seasons. Nontheless,it also shows the build up of drought conditions already since mid-2012 (increase in D0, D1, D2 drought conditions).
+```{r echo = TRUE, eval = TRUE}
+dat %>%
+  gather(drought, perc, D0:D4) %>%
+  select(ReleaseDate, perc, drought) %>%
+  ggplot() +
+  geom_line(aes(x=ReleaseDate, y = perc, color = drought))+
+  facet_grid (drought ~ .)
+```
+  
+  During the period August - October *2014*, the state California experienced the most wide spread extreme and exceptional drought conditions over the whole reasearch period. The drought values during the 3 months period are demonstrated by the following graph:
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+dat[dat$`D4` == max(dat$`D4`) & dat$`D3` == max(dat$`D3`),] %>%
+  gather(drought, perc, D1:D4) %>%
+  select(ReleaseDate, perc, drought) %>%
+  ggplot() +
+  geom_line(aes(x=ReleaseDate, y = perc, color = drought)) +
+  scale_color_manual(values = c("green", "gold2",  "#D55E00", "red"))
+```
+  
+  Temporal development of all classes for the whole period is then overlaid and depicted in the following graph:
+```{r echo = TRUE, eval = TRUE}
+#all five drought levels
+dat %>% gather(drought, perc, D0:D4) %>%
+  select(ReleaseDate, perc, drought) %>%
+  ggplot() +
+  geom_line(aes(x=ReleaseDate, y = perc, color = drought)) +
+  scale_color_manual(values = c("orange", "green", "red", "blue", "black"))
+```
+
+  To address the second research question, namely - drought throughout only summer months, the following data manipulation was performed.
+```{r echo = TRUE, eval = FALSE}
+summer <- dat %>%
+  filter(month>5 & month <9) %>%
+  gather(drought, perc, D0:D4) %>%
+  select(ReleaseDate, perc, drought)
+```
+
+  Furthermore, the graph illustrated below supports the suggestion that summer droughts have intensified and increased their territorial extent since 2011 onwards (observing all drought classes). Nevertheless, the summer of 2016 registered a 30 % decrease of areas experiencing severe, extreme or exceptional droughts.
+```{r echo = TRUE, eval = TRUE}
+  ggplot(summer) +
+  geom_line(aes(x=ReleaseDate, y = perc, color = drought))+
+  facet_grid (drought ~ .)
+```
+
+## Conclusion
+  The reasearch addressed a 16 years long period of drought monitoing. The input data was used to represent the temporal development of the 5 drought classes. They highlighted not only certain extreme and exceptional drought events, but indicated the building up of their pre-condition already 2 years earlier.
+
+
+# Part 2: Meteorologiacl monitoring in a mountain national park
+
+## Introduction
+
+  The current paper is discussing the opportunity for setting up 4 meteorological stations in a mountain national park. Both, the site selection concerns and the equipment needed, are described together with the purposes of the project.
+  
+  Mountains are of great significance for ecosystems and human development. They play an important role especially when it comes to the water resources and are often referred to as the nature's water tower. They could store and distribute water in many ways, some of which include the formation of snow and ice (later melting during warmer periods), forcing orographic precipitation, etc. Mountains are also hotspots for biodiversity and can provide raw materials. For all those reasons, the scientific community puts ever growing efforts to monitor and understand the meteorological characteristics of those regions.
+    
+  Mountains host numerous sets of environmental conditions, compared to low lands where climate variables seem more uniform throughout greater territorial extent. Therefore, a mountain meteorological station could be representative of a small area only. This leads to the conclusion that more stations are needed in high altitude areas to address the same monitoring purposes. 
+  
+  Acquiring high quality meteorological data will help to understand the trends behind continuous meteorological datasets and monitor real-time conditions. To support this goal several key parameters are addressed: air temperature, relative humidity, precipitation, solar radiation, wind speed and direction, snow depth, etc. These variables are essential in studying the water cycle and its short- and long-term environmental implications. The 4 stations will be constructed on the following remote sites:
+- Summit,
+- Ridge,
+- Mid-slope.
+- Valley.
+
+  The main challenges of the project are posed by the remoteness of the locations, their environmental conditions, power supply sources and reliable telecommunications.
+The remoteness of the monitoring sites proves to be a major obstacle in such projects and it could influence the final cost significantly. Nevertheless, components such as high capacity rechargeable batteries, solar panels and remote communication options can sufficiently support the proper functioning of the station and make it possible to deliver quality real-time automatic measurements. The components of monitoring equipment need to be more durable since the periods in between maintenance checks will be longer.
+
+  The environmental and surrounding conditions should also promote the representativeness and the quality of the data recorded. Shading objects and sites prone to rime formation are avoided, since rime accumulation over the monitoring tools can affect their precision. Shading can jeopardize the solar radiation and temperature measurements, so south-facing mountain slopes and obstruction-free sites are most suitable for the purpose of monitoring.
+
+##Monitoring stations
+
+  As described above, the meteorological monitoring network in a mountain national park consists 4 stations. At each of the locations there is a digital camera recording and transmitting the present state of the equipment. The stations as designed as follows:
+
+###*Near the summit*
+
+  The summit itself presents a very narrow niche of environmental conditions. Furthermore, as a national park could support recreation activities, it is expected that tourists visiting the site will also happen to appear in close proximity to the station. Such exposure of the station might lead to intentional hooliganism or unintentional impair of the measurement tools. Therefore, a more remote (still accessible) site on the south-facing slope is chosen for the construction.
+  Campbell Scientific provides the measurement kit used. The station is equipped with [CR3000 Micrologger](https://www.campbellsci.com/cr3000) which is compatibility with wide range of sensors and could handle 28 analogue input channels. Furthermore, the station is powered by two by solar panels giving a total of 120 W. The [required battery capacity](https://s.campbellsci.com/documents/us/technical-papers/pow-sup.pdf) prescribed by the manufacturer has also been considered.
+  
+  ![*Source: Campbell Scientific*](Monitoring/solar panels and battery capacity.bmp)
+  
+As the station might need to rely solely on the battery (especially during winter) for more than 12-14 days, two batteries are incorporated to supply a more continuous and undisrupted monitoring. Thus, the power supply will have sufficient energy capacity even during long winter fog periods. Taking into account that the extreme air temperatures could impair the performance of the rechargeable batteries, it was ascertained that they have an operating temperature range of -40° to +60°C. The datalogger is also set to measure, record, and transmit (daily, weekly) the battery voltage. Another great method of monitoring battery health is storing a daily minimum battery voltage. ([APPLICATION NOTE Power supplies Campbell](https://s.campbellsci.com/documents/us/technical-papers/pow-sup.pdf).
+
+The CR3000 datalogger measures a wide range of parameters, including [wind velocity and direction](https://www.campbellsci.com/05103-l), [atmospheric pressure](http://www.campbellsci.de/cs100),  [relative humidity](https://www.campbellsci.com/083e), [air temperature](https://www.campbellsci.com/083e), [snow depth](http://www.campbellsci.ca/sr50a?gclid=CjwKEAjw_PfGBRDW_sutqMbQsmMSJAAMpUap_5gG7ohoFlvqZ4bwZcVkZhn3agBWGO41r5PAuS1B9BoCBFHw_wcB), [solar radiation](https://www.campbellsci.com/cmp21), and [solid and liquid precipitation](https://www.campbellsci.com/pn52202). To support the representativeness of the data, 3 rain gauges are deployed.
+
+The communication with the station will be held through one of the many transfer options of the micrologger (phone modems, satellite telemetry, etc.). The satellite telemetry system enhances the reliability of the data transfer in case of unavailability of the cellular network.
+
+###*On the ridge*
+
+The second station is constructed on the ridge of the mountain and is equipped with a similar set of instruments. Additional interest is the study of avalanche occurance as is of great importance to examine the avalanche conditions in correlation to the climate conditions, as wind and precipitation could be driving factors. Therefore, the site (for the meteorological-seismic station) was chosen based on information that avalanches happen at least once a year in the area. 
+An scheme of the equipment's placement is produced by HERWIJNEN & SCHWEIZER, 2011:
+
+  ![*Source: HERWIJNEN & SCHWEIZER, 2011*](Monitoring/avalanche.bmp)
+
+To achieve the goal of the study geophones are places in foam coating and placed in the snow, so that they could record the cracking activity inside the snow layer.
+
+###*Mid-slope*
+
+Mid-slope environmental conditions differ from the summit and the ridge since they most likely support the development of high vegetation. Trees are a natural obstruction concerning wind speed and direction measurements since they alter the wind turbulence in the atmospheric layer over them. The world meteorological organization (WMO) advises that the wind sensor should be at a distance of at least ten times the height of nearby obstructions (trees, buildings), as shown by the following graph:
+
+  ![*Source:* http://www.canarysystems.com/nsupport/canary_an3.pdf](Monitoring/wind sensor.bmp)
+
+Considering the relative humidity measurements, the station (along with the sensors) should be located in an open area (to allow air mixing) preferably covered by short grass, or the natural earth. Certain conditions should be avoided especially in regard to the temperature and RH monitoring, namely: 
+- high vegetation (shading effect, air turbulence patterns)
+- shaded areas
+- swamps (influences the evaporation rates)
+- places holding standing water after precipitation events
+- asphalt surfaces (roads, platforms)
+
+The station is equipped with the same sensors as the one in the summit. Nevertheless, a snow pillow  and snow water equivalent (SWE) sensor are added (over a flat/leveled ground) in order to study the snow cover and the water reserves stored in it. 
+The [snow pillow](http://www.hydrologicalusa.com/images/uploads/Productinformation_Snowpillow-3x3m_Vxx.xxrxx_V004_ENG_www_.pdf) has the 3 x 3 m size and measures the hydraulic pressure created the layer of snow on top of it. Thus, the water equivalent of that snow patch could be derived. Nevertheless, the measurement could be biased by wind patterns that tend to redistribute the accumulated snow over certain areas. In addition to the snow pillow, the [SWE sensor](https://www.campbellsci.ca/cs725 ) is situated above ground at an appropriate height in order to passively detects the change in naturally occurring electromagnetic energy from the ground after it passes through snow cover.
+
+###*Valley*
+
+The valley hosts environmental conditions which are not characterized by the extreme nature of high altitude areas. Nevertheless, the results from the automatic weather station situated here are important to compliment them. When combined they help understand the vertical dimension of the climate variables in this mountain area. To support monitoring key variables, the weather station will have similar sensors as the other three stations. Furthermore, the site was chosen so that it has a free view on most of the south-facing slopes of the mountain, so that a digital camera could record the occurrence of an avalanche near the station on the ridge.
+
+It is expected that the results from this station will show less bias in the precipitation measurement, lower wind turbulence, less snow cover, but higher evaporation rates (mainly due to lower cloud cover and higher air temperature).
+To monitor the changing environment in the soil and understand the underground processes of the water cycle, a weighting [hydro-lysimeter](http://www.ums-muc.de/en/lysimeter/hydro-lysimeter/) is deployed at the site. It is used to provide accurate data about precipitation, precipitation intensity, evapotranspiration, thus also serving calibration purposes.
+In addition, a distrometer is installed, which could provide information about the diameter of the precipitation droplets and their velocity. Thus, it could be automatically determined whether solid or liquid precipitation occurs. The real-time readout of the disdrometer can provide data on the intensity and the form of precipitation.
+Nontheless, the lysimeter is expected to have higher accuracy than the disdrometer in terms of volume of precipitation. One exception could be during spring since the snowmelt will significantly exaggerate the precipitation measurement. 
+In addition, the station is equipped with snow pillow  and snow water equivalent (SWE) sensor, the results from which could serve as for comparison with the mid-slope station.
+
+##Calibration
+Calibration of the meteorological station is also considered when possible. It could be conducted during maintenance checks by using instruments that have higher accuracy than the once mounted on the station. 
+Calibration itself is the practice of checking the precision of an instrument against another. Normally if the bias is in the frame of the manufacturer's stated accuracy, no correction is to be applied. Nevertheless, correcting the data, should be done only after there is long-term data acquired by the sensor so that the magnitude and bias of deviations can be logged.
+
+##Conclusion
+The paper described part of the considerations surrounding the development of a meteorological monitoring network in a mountain national park. High quality equipment was deployed on the station, so that it could withstand the (sometimes) extreme environmental conditions in those regions. The problem of having remoteness stations was addressed by properly studying the power supply options and a combination of solar panels and 2 external batteries was chosen to support the long-term monitoring. Key meteorological variables and snow seismic activity (at one of the stations) are addressed by deploying various instruments with high precision and taking into account certain obstructions.
+
+
+##References:
+
+*Durán Luis & Rodríguez-Muñoz Irene, 2016*, Automatic monitoring of weather and climate at mountain areas. The case of Peñalara meteorological network (RMPNP)
+
+*Herndl Markus, Winkler Gerfried, Birk Steffen, 2014*, Precipitation and Evapotranspiration at the Mountain Lysimeter Station Stoderzinken 
+
+*VAN HERWIJNEN Alec, SCHWEIZER Juerg, 2011*, Seismic sensor array for monitoring an avalanche start zone: design, deployment and preliminary results.
+
+[*Weather Monitoring on Mont Blanc*](www.campbellsci.com/mont-blanc-weather)
+
+
