@@ -3,13 +3,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ---
 title: "EPL historical data"
-output: html_document
+output: 
+  html_document:
+    keep_md: true
 ---
 
 ```{r readIn}
 library(tidyverse)
 library(ggrepel)
 library(lubridate)
+library(ggpubr)
+library(scales)
 
 d <- read.csv("EPL_Set.csv", header = TRUE)
 d <- d %>%
@@ -18,7 +22,7 @@ d <- d %>%
   mutate(Date = dmy(Date))
 ```
 
-```{r numberOfSeasons, echo = TRUE, fig.width= 10, fig.height= 8}
+```{r numberOfSeasons, echo = TRUE, fig.width= 13, fig.height= 8}
 #Number of seasons played in the EPL since 1995
 fiveSeasons <- list("firebrick", 2, "dashed", 5)
 tenSeasons <- list("chocolate3", 2, "dashed", 10)
@@ -33,6 +37,7 @@ d %>% group_by(HomeTeam) %>%
   coord_flip() +
   xlab("Teams") +
   guides(fill=FALSE) +
+  theme(axis.text.x.bottom = element_text(size = 15)) +
   ggtitle("Number of seasons teams have played in the PL since 1995") + 
   geom_hline(yintercept=fiveSeasons[[4]], linetype=fiveSeasons[[3]], size=fiveSeasons[[2]], color = fiveSeasons[[1]]) +
   geom_hline(yintercept=tenSeasons[[4]], linetype=tenSeasons[[3]], size=tenSeasons[[2]], color = tenSeasons[[1]]) +
@@ -43,14 +48,15 @@ d %>% group_by(HomeTeam) %>%
 ```{r wdl}
 #Win/Draw/Lose balance across seasons
 wdlBalance <- function(dataset = d, team = ""){
-  dataset %>%
+    dataset %>%
     filter(HomeTeam == team | AwayTeam == team) %>%
     mutate(venue = ifelse(HomeTeam == team, "H", "A"),
            result = ifelse(HomeTeam == team & FTR == "H", "W",
                            ifelse(AwayTeam == team & FTR == "A", "W",
                                   ifelse(HomeTeam == team & FTR == "A", "L",
                                          ifelse(AwayTeam == team & FTR == "H", "L",
-                                                ifelse(FTR == "D", "D", NA)))))) %>%
+                                                ifelse(FTR == "D", "D", NA))))),
+           Season = as.Date(paste0("01/01/", substr(Season, 1, 4)),format = "%d/%m/%Y")) %>%
     group_by(Season, venue) %>%
     summarise(W = sum(result == "W"),
               D = sum(result == "D"),
@@ -59,6 +65,7 @@ wdlBalance <- function(dataset = d, team = ""){
     mutate(Outcome = factor(Outcome, c("L", "D", "W"))) %>%
     ggplot(aes(x = Season, y = Games, fill = Outcome)) +
     geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("coral", "goldenrod1","dodgerblue1")) +
     ggtitle(team) +
     theme(axis.title.x.bottom = element_blank(),
           axis.text.x.bottom = element_text(angle = 90),
@@ -80,6 +87,10 @@ for (teamIndex in 1:length(wdlTeams)) {
 }
 ```
 
+```{r wdlPlot, echo = TRUE, fig.width= 10, fig.height= 8}
+p <- do.call(ggarrange, c(plotlist = wdl, nrow = 2, ncol = 4, common.legend = TRUE, legend = "bottom"))
+annotate_figure(p, top = "Win/Draw/Loss balance of eight teams across all seasons since 1995")
+```
 
 ```{r comebacks, echo = TRUE, fig.width= 10}
 #Comebacks per season----
@@ -236,6 +247,7 @@ winsDat %>%
                    segment.color = 'grey50') +
   ggtitle(winsTitle) +
   ylab("Goal difference") +
+  scale_x_date(labels = date_format("%m-%Y")) +
   theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
         axis.text.y.left = element_text(size = 20),
         axis.title.y.left = element_text(size = 20),
@@ -257,6 +269,7 @@ noWinDat %>%
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   ggtitle(noWinTitle) +
+  scale_x_date(labels = date_format("%m-%Y")) +
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
         axis.text.y.left = element_text(size = 20),
@@ -279,6 +292,7 @@ undefeatedDat %>%
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   ggtitle(undefeatedTitle) +
+  scale_x_date(labels = date_format("%m-%Y")) +
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
         axis.text.y.left = element_text(size = 20),

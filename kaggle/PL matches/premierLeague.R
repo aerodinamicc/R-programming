@@ -1,6 +1,7 @@
 library(tidyverse)
 library(ggrepel)
 library(lubridate)
+library(scales)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -24,6 +25,7 @@ d %>% group_by(HomeTeam) %>%
   coord_flip() +
   xlab("Teams") +
   guides(fill=FALSE) +
+  theme(axis.text.x.bottom = element_text(size = 15)) +
   ggtitle("Number of seasons teams have played in the PL since 1995") + 
   geom_hline(yintercept=fiveSeasons[[4]], linetype=fiveSeasons[[3]], size=fiveSeasons[[2]], color = fiveSeasons[[1]]) +
   geom_hline(yintercept=tenSeasons[[4]], linetype=tenSeasons[[3]], size=tenSeasons[[2]], color = tenSeasons[[1]]) +
@@ -39,7 +41,8 @@ wdlBalance <- function(dataset = d, team = ""){
                            ifelse(AwayTeam == team & FTR == "A", "W",
                                   ifelse(HomeTeam == team & FTR == "A", "L",
                                          ifelse(AwayTeam == team & FTR == "H", "L",
-                                                ifelse(FTR == "D", "D", NA)))))) %>%
+                                                ifelse(FTR == "D", "D", NA))))),
+           Season = as.Date(paste0("01/01/", substr(Season, 1, 4)),format = "%d/%m/%Y")) %>%
     group_by(Season, venue) %>%
     summarise(W = sum(result == "W"),
               D = sum(result == "D"),
@@ -48,6 +51,7 @@ wdlBalance <- function(dataset = d, team = ""){
     mutate(Outcome = factor(Outcome, c("L", "D", "W"))) %>%
     ggplot(aes(x = Season, y = Games, fill = Outcome)) +
     geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("coral", "goldenrod1","dodgerblue1")) +
     ggtitle(team) +
     theme(axis.title.x.bottom = element_blank(),
           axis.text.x.bottom = element_text(angle = 90),
@@ -223,6 +227,7 @@ winsDat %>%
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   ggtitle(winsTitle) +
+  scale_x_date(labels = date_format("%m-%Y")) +
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(angle = 90))
 
@@ -240,6 +245,7 @@ noWinDat %>%
                    point.padding = 0.5,
                    segment.color = 'grey50') +
   ggtitle(noWinTitle) +
+  scale_x_date(labels = date_format("%m-%Y")) +
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(angle = 90))
 
@@ -256,6 +262,7 @@ undefeatedDat %>%
                    box.padding   = 0.35, 
                    point.padding = 0.5,
                    segment.color = 'grey50') +
+  scale_x_date(labels = date_format("%m-%Y")) +
   ggtitle(undefeatedTitle) +
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(angle = 90))
