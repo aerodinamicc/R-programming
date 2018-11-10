@@ -1,13 +1,3 @@
----
-title: "EPL historical data"
-output: 
-  html_document: 
-    keep_md: yes
----
-
-
-
-
 ```r
 library(tidyverse)
 ```
