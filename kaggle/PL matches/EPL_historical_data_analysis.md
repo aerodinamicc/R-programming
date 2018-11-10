@@ -5,17 +5,120 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+
+
+```r
+library(tidyverse)
 ```
 
-```{r readIn}
-library(tidyverse)
-library(ggrepel)
-library(lubridate)
-library(ggpubr)
-library(scales)
+```
+## Warning: package 'tidyverse' was built under R version 3.4.4
+```
 
+```
+## -- Attaching packages ---------------------------------------------------------------------------------------------------------------------------------- tidyverse 1.2.1 --
+```
+
+```
+## v ggplot2 3.0.0     v purrr   0.2.4
+## v tibble  1.4.2     v dplyr   0.7.4
+## v tidyr   0.8.0     v stringr 1.2.0
+## v readr   1.1.1     v forcats 0.2.0
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 3.4.4
+```
+
+```
+## -- Conflicts ------------------------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()
+```
+
+```r
+library(ggrepel)
+```
+
+```
+## Warning: package 'ggrepel' was built under R version 3.4.4
+```
+
+```r
+library(lubridate)
+```
+
+```
+## Warning: package 'lubridate' was built under R version 3.4.4
+```
+
+```
+## 
+## Attaching package: 'lubridate'
+```
+
+```
+## The following object is masked from 'package:base':
+## 
+##     date
+```
+
+```r
+library(ggpubr)
+```
+
+```
+## Warning: package 'ggpubr' was built under R version 3.4.4
+```
+
+```
+## Loading required package: magrittr
+```
+
+```
+## 
+## Attaching package: 'magrittr'
+```
+
+```
+## The following object is masked from 'package:purrr':
+## 
+##     set_names
+```
+
+```
+## The following object is masked from 'package:tidyr':
+## 
+##     extract
+```
+
+```r
+library(scales)
+```
+
+```
+## Warning: package 'scales' was built under R version 3.4.4
+```
+
+```
+## 
+## Attaching package: 'scales'
+```
+
+```
+## The following object is masked from 'package:purrr':
+## 
+##     discard
+```
+
+```
+## The following object is masked from 'package:readr':
+## 
+##     col_factor
+```
+
+```r
 d <- read.csv("EPL_Set.csv", header = TRUE)
 d <- d %>%
   filter(!as.character(Season) %in% c("1993-94", "1994-95")) %>%
@@ -23,7 +126,8 @@ d <- d %>%
   mutate(Date = dmy(Date))
 ```
 
-```{r numberOfSeasons, echo = TRUE, fig.width= 13, fig.height= 8}
+
+```r
 #Number of seasons played in the EPL since 1995
 fiveSeasons <- list("firebrick", 2, "dashed", 5)
 tenSeasons <- list("chocolate3", 2, "dashed", 10)
@@ -46,7 +150,10 @@ d %>% group_by(HomeTeam) %>%
   geom_hline(yintercept=twentySeasons[[4]], linetype=twentySeasons[[3]], size=twentySeasons[[2]], color = twentySeasons[[1]])
 ```
 
-```{r wdl}
+![](EPL_historical_data_analysis_files/figure-html/numberOfSeasons-1.png)<!-- -->
+
+
+```r
 #Win/Draw/Lose balance across seasons
 wdlBalance <- function(dataset = d, team = ""){
     dataset %>%
@@ -88,12 +195,16 @@ for (teamIndex in 1:length(wdlTeams)) {
 }
 ```
 
-```{r wdlPlot, echo = TRUE, fig.width= 10, fig.height= 8}
+
+```r
 p <- do.call(ggarrange, c(plotlist = wdl, nrow = 2, ncol = 4, common.legend = TRUE, legend = "bottom"))
 annotate_figure(p, top = "Win/Draw/Loss balance of eight teams across all seasons since 1995")
 ```
 
-```{r comebacks, echo = TRUE, fig.width= 10}
+![](EPL_historical_data_analysis_files/figure-html/wdlPlot-1.png)<!-- -->
+
+
+```r
 #Comebacks per season----
 comebacks <- function(dataset = d, period = unique(d$Season)){
   dataset %>%
@@ -114,7 +225,10 @@ comebacks <- function(dataset = d, period = unique(d$Season)){
 comebacks()
 ```
 
-```{r streaksFunctions}
+![](EPL_historical_data_analysis_files/figure-html/comebacks-1.png)<!-- -->
+
+
+```r
 #identifies the latest streak so that its indices could be used for the subset of the dataset
 findStreakIndices <- function(sequence, wholePeriod){
   indices <- str_split(wholePeriod, sequence)
@@ -232,7 +346,8 @@ streakFun <- function(outcome){
 }
 ```
 
-```{r wins, echo = TRUE, fig.width= 14, fig.height= 9}
+
+```r
 wins <- streakFun("W")
 
 winsTitle <- paste("Longest winning streak:", wins[[2]], "by", wins[[1]])
@@ -255,7 +370,10 @@ winsDat %>%
         axis.title.x.bottom = element_text(size = 20))
 ```
 
-```{r winless, echo = TRUE, fig.width= 14, fig.height= 9}
+![](EPL_historical_data_analysis_files/figure-html/wins-1.png)<!-- -->
+
+
+```r
 noWin <- streakFun("X")
 noWinTitle <- paste("Longest winless streak:", noWin[[2]], "by", noWin[[1]])
 noWinDat <- noWin[[3]]
@@ -278,7 +396,10 @@ noWinDat %>%
         axis.title.x.bottom = element_text(size = 20))
 ```
 
-```{r undefeated, echo = TRUE, fig.width= 14, fig.height= 9}
+![](EPL_historical_data_analysis_files/figure-html/winless-1.png)<!-- -->
+
+
+```r
 undefeated <- streakFun("U")
 undefeatedTitle <- paste("Longest undefeated streak:", undefeated[[2]], "by", undefeated[[1]])
 undefeatedDat <- undefeated[[3]]
@@ -301,7 +422,6 @@ undefeatedDat %>%
         axis.title.x.bottom = element_text(size = 20))
 ```
 
-```{r, include=FALSE}
-   file.rename(from="EPL_historical_data_analysis.md", 
-               to="README.md")
-```
+![](EPL_historical_data_analysis_files/figure-html/undefeated-1.png)<!-- -->
+
+
