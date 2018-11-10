@@ -1,16 +1,25 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+---
+title: "EPL historical data"
+output: html_document
+---
+
+```{r readIn}
 library(tidyverse)
 library(ggrepel)
 library(lubridate)
-
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 d <- read.csv("EPL_Set.csv", header = TRUE)
 d <- d %>%
   filter(!as.character(Season) %in% c("1993-94", "1994-95")) %>%
   mutate_if(is.factor, as.character) %>%
   mutate(Date = dmy(Date))
+```
 
-#Number of seasons in the PL----
+```{r numberOfSeasons, echo = TRUE, fig.width= 10, fig.height= 8}
+#Number of seasons played in the EPL since 1995
 fiveSeasons <- list("firebrick", 2, "dashed", 5)
 tenSeasons <- list("chocolate3", 2, "dashed", 10)
 fifteenSeasons <- list("chocolate1", 2, "dashed", 15)
@@ -29,7 +38,9 @@ d %>% group_by(HomeTeam) %>%
   geom_hline(yintercept=tenSeasons[[4]], linetype=tenSeasons[[3]], size=tenSeasons[[2]], color = tenSeasons[[1]]) +
   geom_hline(yintercept=fifteenSeasons[[4]], linetype=fifteenSeasons[[3]], size=fifteenSeasons[[2]], color = fifteenSeasons[[1]]) +
   geom_hline(yintercept=twentySeasons[[4]], linetype=twentySeasons[[3]], size=twentySeasons[[2]], color = twentySeasons[[1]])
+```
 
+```{r wdl}
 #Win/Draw/Lose balance across seasons
 wdlBalance <- function(dataset = d, team = ""){
   dataset %>%
@@ -67,10 +78,10 @@ for (teamIndex in 1:length(wdlTeams)) {
   plot = wdlBalance(team = var)
   wdl[[teamIndex]] <- eval(substitute(plot))
 }
+```
 
-p <- do.call(ggarrange, c(plotlist = wdl, nrow = 2, ncol = 4, common.legend = TRUE, legend = "bottom"))
-annotate_figure(p, top = "Win/Draw/Loss balance of eight teams across all seasons since 1995")
 
+```{r comebacks, echo = TRUE, fig.width= 10}
 #Comebacks per season----
 comebacks <- function(dataset = d, period = unique(d$Season)){
   dataset %>%
@@ -89,9 +100,9 @@ comebacks <- function(dataset = d, period = unique(d$Season)){
 }
 
 comebacks()
+```
 
-#Longest winning streaks----
-
+```{r streaksFunctions}
 #identifies the latest streak so that its indices could be used for the subset of the dataset
 findStreakIndices <- function(sequence, wholePeriod){
   indices <- str_split(wholePeriod, sequence)
@@ -105,6 +116,11 @@ findStreakIndices <- function(sequence, wholePeriod){
 
 #Gets a team's longest(and most recent) streak of a specified outcome
 typeOfStreakFun <- function(outcome, team){
+    # W - streak of wins,
+    # U - streak of games without loss,
+    # D - streak of draws,
+    # X - streak of games without wins,
+    # L - streak of losses
   #winning streak
   if (outcome == "W") {
     dataset <- d %>%
@@ -190,11 +206,6 @@ streakFun <- function(outcome){
   longestStreakTeam <- ""
   
   for (team in teams) {
-    # W - streak of wins,
-    # U - streak of games without loss,
-    # D - streak of draws,
-    # X - streak of games without wins,
-    # L - streak of losses
     data <- typeOfStreakFun(outcome, team)
     teamsStreak <- longestStreakFun(data, outcome)
     if(teamsStreak[[1]] > longestStreak){
@@ -207,8 +218,9 @@ streakFun <- function(outcome){
   lst <- list(longestStreakTeam, longestStreak, detailsStreak)
   lst
 }
+```
 
-#Plottins streaks----
+```{r wins, echo = TRUE, fig.width= 14, fig.height= 9}
 wins <- streakFun("W")
 
 winsTitle <- paste("Longest winning streak:", wins[[2]], "by", wins[[1]])
@@ -224,8 +236,13 @@ winsDat %>%
                    segment.color = 'grey50') +
   ggtitle(winsTitle) +
   ylab("Goal difference") +
-  theme(axis.text.x.bottom = element_text(angle = 90))
+  theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
+        axis.text.y.left = element_text(size = 20),
+        axis.title.y.left = element_text(size = 20),
+        axis.title.x.bottom = element_text(size = 20))
+```
 
+```{r winless, echo = TRUE, fig.width= 14, fig.height= 9}
 noWin <- streakFun("X")
 noWinTitle <- paste("Longest winless streak:", noWin[[2]], "by", noWin[[1]])
 noWinDat <- noWin[[3]]
@@ -241,8 +258,13 @@ noWinDat %>%
                    segment.color = 'grey50') +
   ggtitle(noWinTitle) +
   ylab("Goal difference") +
-  theme(axis.text.x.bottom = element_text(angle = 90))
+  theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
+        axis.text.y.left = element_text(size = 20),
+        axis.title.y.left = element_text(size = 20),
+        axis.title.x.bottom = element_text(size = 20))
+```
 
+```{r undefeated, echo = TRUE, fig.width= 14, fig.height= 9}
 undefeated <- streakFun("U")
 undefeatedTitle <- paste("Longest undefeated streak:", undefeated[[2]], "by", undefeated[[1]])
 undefeatedDat <- undefeated[[3]]
@@ -258,9 +280,8 @@ undefeatedDat %>%
                    segment.color = 'grey50') +
   ggtitle(undefeatedTitle) +
   ylab("Goal difference") +
-  theme(axis.text.x.bottom = element_text(angle = 90))
-
-  
-
-
-
+  theme(axis.text.x.bottom = element_text(size = 20, angle = 90),
+        axis.text.y.left = element_text(size = 20),
+        axis.title.y.left = element_text(size = 20),
+        axis.title.x.bottom = element_text(size = 20))
+```
