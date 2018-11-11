@@ -1,15 +1,6 @@
----
-output: 
-  html_document: 
-    keep_md: yes
----
-
-
-<p style="text-align: center; font-size: x-large;"> Drought stress in the Amazon rainforest </p>
-
-<p style="text-align: center; font-size: large;"> An evaluation of different drought metrics and datasets </p>
-
-<p style="text-align: center; font-size: medium;"> The code behind </p>
+## Drought stress in the Amazon rainforest 
+## An evaluation of different drought metrics and datasets
+#The code behind
 
 
 ```r
