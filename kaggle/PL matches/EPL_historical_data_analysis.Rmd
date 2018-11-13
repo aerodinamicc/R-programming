@@ -7,15 +7,12 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 Hey, guys!
 
 Here's my EDA on the PL fixtures. From them I also derived the seasonal standings. Have a look below and see what I found.
 
-```{r readIn}
+```{r readIn, echo = FALSE, message=FALSE}
 library(tidyverse)
 library(ggrepel)
 library(lubridate)
@@ -30,7 +27,7 @@ d <- d %>%
 ```
 
 # How long they have been in the EPL?
-```{r numberOfSeasons, echo = TRUE, fig.width= 13, fig.height= 8}
+```{r numberOfSeasons, echo = TRUE, fig.width= 13, fig.height= 8, echo = FALSE}
 #Number of seasons played in the EPL since 1995
 fiveSeasons <- list("firebrick", 2, "dashed", 5)
 tenSeasons <- list("chocolate3", 2, "dashed", 10)
@@ -54,7 +51,7 @@ d %>% group_by(HomeTeam) %>%
 ```
 
 # Top teams' W/D/L balance
-```{r wdl}
+```{r wdl, echo = FALSE}
 #Win/Draw/Lose balance across seasons
 wdlBalance <- function(dataset = d, team = ""){
     dataset %>%
@@ -97,7 +94,7 @@ for (teamIndex in 1:length(wdlTeams)) {
 ```
 
 Please note that the 1993-94 and 1994-95 seasons saw 22 playing in the PL.
-```{r wdlPlot, echo = TRUE, fig.width= 10, fig.height= 8}
+```{r wdlPlot, echo = TRUE, fig.width= 10, fig.height= 8, echo = FALSE}
 p <- do.call(ggarrange, c(plotlist = wdl, nrow = 2, ncol = 4, common.legend = TRUE, legend = "bottom"))
 annotate_figure(p, top = "Win/Draw/Loss balance of eight teams across all seasons since 1995")
 ```
@@ -107,7 +104,7 @@ annotate_figure(p, top = "Win/Draw/Loss balance of eight teams across all season
 Look at that! That's the number of comebacks per season. Unless you are on the wrong side of the scoreboard, it's always fun to watch these games. Here's theit distribution in time.
 
 Note: No HT-FT data is available for 1993-94 and 1994-95 season
-```{r comebacks, echo = TRUE, fig.width= 10}
+```{r comebacks, echo = TRUE, fig.width= 10, echo = FALSE}
 #Comebacks per season----
 comebacks <- function(dataset = d, period = unique(d$Season)){
   dataset %>%
@@ -129,7 +126,7 @@ comebacks()
 ```
 
 The following functions make it possible to identify sequences of difference game outcomes.
-```{r streaksFunctions}
+```{r streaksFunctions, echo = FALSE}
 #identifies the latest streak so that its indices could be used for the subset of the dataset
 findStreakIndices <- function(sequence, wholePeriod){
   indices <- str_split(wholePeriod, sequence)
@@ -253,7 +250,7 @@ The y-axis on the figures below represents the goal difference, thus they highli
 Please use the tabs to explore all longest streaks regarding the outcome.
 
 ## Winning
-```{r wins, echo = TRUE, fig.width= 14, fig.height= 9}
+```{r wins, echo = TRUE, fig.width= 14, fig.height= 9, echo = FALSE}
 wins <- streakFun("W")
 
 winsTitle <- paste("Longest winning streak:", wins[[2]], "by", wins[[1]])
@@ -277,7 +274,7 @@ winsDat %>%
 ```
 
 ## Winless
-```{r winless, echo = TRUE, fig.width= 14, fig.height= 9}
+```{r winless, echo = TRUE, fig.width= 14, fig.height= 9, echo = FALSE}
 noWin <- streakFun("X")
 noWinTitle <- paste("Longest winless streak:", noWin[[2]], "by", noWin[[1]])
 noWinDat <- noWin[[3]]
@@ -301,7 +298,7 @@ noWinDat %>%
 ```
 
 ##Undefeated
-```{r undefeated, echo = TRUE, fig.width= 14, fig.height= 9}
+```{r undefeated, echo = TRUE, fig.width= 14, fig.height= 9, echo = FALSE}
 undefeated <- streakFun("U")
 undefeatedTitle <- paste("Longest undefeated streak:", undefeated[[2]], "by", undefeated[[1]])
 undefeatedDat <- undefeated[[3]]
@@ -325,10 +322,9 @@ undefeatedDat %>%
 ```
 
 #Standings
-
-##Computing poins
-Having the games list and their outcomes allows to compute the points out of a game, sum them up and end up with points, GD, and goals scored in a season.
-```{r seasonalPoints}
+```{r seasonalPoints, echo = FALSE}
+#Computing points
+#Having the games list and their outcomes allows to compute the points out of a game, sum them up and end up with points, GD, and #goals scored in a season.
 pointsPerSeasonFun <- function(dataset = d, team){
   d %>%
     filter(HomeTeam == team | AwayTeam == team) %>%
@@ -361,9 +357,9 @@ for (team in teams) {
 }
 ```
 
-##Computing standings
-Having computed the points we could then group by season and derive the rankings.
-```{r standings}
+```{r standings, echo = FALSE}
+#Computing standings
+#Having computed the points we could then group by season and derive the rankings.
 standings <- pps %>%
   group_by(Season) %>%
   arrange(Season, desc(points), desc(goalDiff), desc(goalsScored)) %>%
@@ -372,7 +368,7 @@ standings <- pps %>%
 
 ##Number of titles
 I feel like I owe it to the Man Utd and Chelsea fans and I've included the number of titles won by any team in the Premier League era.
-```{r titlePlotting, echo = TRUE, fig.width= 9, fig.height= 6}
+```{r titlePlotting, echo = TRUE, fig.width= 9, fig.height= 6, echo = FALSE}
 standings %>%
   filter(rank == 1) %>%
   group_by(team) %>%
@@ -384,7 +380,7 @@ standings %>%
 
 ##Point difference between champion and runner-up
 Last but not least, we have diffrence in points between the champion and the runner-up. Labels are also added to signify the actual winner and second-placed teams.
-```{r championsAndRunnersUp, echo = TRUE, fig.width= 14, fig.height= 9}
+```{r championsAndRunnersUp, echo = TRUE, fig.width= 14, fig.height= 9, echo = FALSE}
 standings %>%
   ungroup() %>%
   mutate(Season = as.Date(paste0("01/01/", substr(Season, 1, 4)),format = "%d/%m/%Y")) %>% #That's just for better visualization on the x-axis
