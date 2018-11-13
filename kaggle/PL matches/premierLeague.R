@@ -2,12 +2,12 @@ library(tidyverse)
 library(ggrepel)
 library(lubridate)
 library(scales)
+library(highcharter)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 d <- read.csv("EPL_Set.csv", header = TRUE)
 d <- d %>%
-  filter(!as.character(Season) %in% c("1993-94", "1994-95")) %>%
   mutate_if(is.factor, as.character) %>%
   mutate(Date = dmy(Date))
 
@@ -32,7 +32,7 @@ d %>% group_by(HomeTeam) %>%
   geom_hline(yintercept=fifteenSeasons[[4]], linetype=fifteenSeasons[[3]], size=fifteenSeasons[[2]], color = fifteenSeasons[[1]]) +
   geom_hline(yintercept=twentySeasons[[4]], linetype=twentySeasons[[3]], size=twentySeasons[[2]], color = twentySeasons[[1]])
 
-#Win/Draw/Lose balance across seasons
+#Win/Draw/Lose balance across seasons----
 wdlBalance <- function(dataset = d, team = ""){
   dataset %>%
     filter(HomeTeam == team | AwayTeam == team) %>%
@@ -94,9 +94,8 @@ comebacks <- function(dataset = d, period = unique(d$Season)){
 
 comebacks()
 
-#Longest winning streaks----
 
-#identifies the latest streak so that its indices could be used for the subset of the dataset
+#A function that identifies the latest streak so that its indices could be used for the subset of the dataset----
 findStreakIndices <- function(sequence, wholePeriod){
   indices <- str_split(wholePeriod, sequence)
   lastPeriod <- nchar(indices[[1]][length(indices[[1]])]) #length of the period after last longest winning streak
@@ -167,7 +166,7 @@ typeOfStreakFun <- function(outcome, team){
   dataset
 }
 
-#Gets longest(and most recent) streak of a specified outcome across all teams
+#Gets longest(and most recent) streak of a specified outcome across all teams----
 longestStreakFun <- function(dataset, outcome){
   streaks <- rle(x = dataset$result)
   
@@ -292,7 +291,7 @@ teams <- unique(d$HomeTeam)
 
 #PPS stands for points per season
 pps <- data.frame()
-points <- points %>%
+pps <- pps %>%
   mutate(Season = as.character(NA),
          team = as.character(NA),
          points = as.numeric(NA),
@@ -313,7 +312,33 @@ standings <- pps %>%
 
 #Titles----
 
+standings %>%
+  filter(rank == 1) %>%
+  group_by(team) %>%
+  summarise(titles = n()) %>%
+  hchart('treemap', hcaes(x = 'team', value = 'titles', color = 'titles', size = 20)) %>%
+  hc_add_theme(hc_theme_sandsignika()) %>%
+  hc_title(text="Premier League Titles")
+
 #Champions and runners-up----
+standings %>%
+  ungroup() %>%
+  mutate(Season = as.Date(paste0("01/01/", substr(Season, 1, 4)),format = "%d/%m/%Y")) %>% #That's just for better visualization on the x-axis
+  group_by(Season) %>%
+  filter(rank %in% c(1,2)) %>%
+  select(Season, team, points, rank) %>%
+  mutate(rank = factor(rank, c(1,2))) %>%
+  ggplot(aes(x = Season, y = points)) +
+  geom_line(aes(color = rank, size = 1.5)) +
+  geom_label_repel(aes(label = team, color = rank),
+                  box.padding   = 1, 
+                  point.padding = 0.5,
+                  segment.color = 'grey50',
+                  size = 7) +
+  scale_size(guide = "none") +
+  geom_vline(xintercept = 1995, linetype="dotted", 
+               color = "blue", size=1.5) + 
+  ggtitle("Champions and runners-up")
   
 
 
