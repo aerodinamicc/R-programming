@@ -107,7 +107,7 @@ findStreakIndices <- function(sequence, wholePeriod){
   lst(start, end)
 }
 
-#Gets a team's longest(and most recent) streak of a specified outcome
+#Gets a team's longest(and most recent) streak of a specified outcome----
 typeOfStreakFun <- function(outcome, team){
   #winning streak
   if (outcome == "W") {
@@ -267,6 +267,53 @@ undefeatedDat %>%
   ylab("Goal difference") +
   theme(axis.text.x.bottom = element_text(angle = 90))
 
+  
+
+
+
+
+
+#Seasonal points----
+pointsPerSeasonFun <- function(dataset = d, team){
+  d %>%
+    filter(HomeTeam == team | AwayTeam == team) %>%
+    mutate(points = ifelse(HomeTeam == team & FTR == "H", 3,
+                           ifelse(AwayTeam == team & FTR == "A", 3,
+                                  ifelse(FTR== "D", 1, 0))),
+           goalDiff = ifelse(HomeTeam == team, FTHG - FTAG, FTAG - FTHG),
+           goalsScored = ifelse(HomeTeam == team, FTHG, FTAG),
+           team = team) %>%
+    group_by(Season, team) %>%
+    summarise(points = sum(points), goalDiff = sum(goalDiff), goalsScored = sum(goalsScored)) %>%
+    select(Season, team,points, goalsScored, goalDiff)
+}
+
+teams <- unique(d$HomeTeam)
+
+#PPS stands for points per season
+pps <- data.frame()
+points <- points %>%
+  mutate(Season = as.character(NA),
+         team = as.character(NA),
+         points = as.numeric(NA),
+         goalsScored = as.numeric(NA),
+         goalDiff = as.numeric(NA))
+
+
+for (team in teams) {
+  teamsPointsPerSeason <- pointsPerSeasonFun(team = team)
+  pps <- pps %>% bind_rows(teamsPointsPerSeason)
+}
+
+#Seasonal standings----
+standings <- pps %>%
+  group_by(Season) %>%
+  arrange(Season, desc(points), desc(goalDiff), desc(goalsScored)) %>%
+  mutate(rank = row_number(Season))
+
+#Titles----
+
+#Champions and runners-up----
   
 
 
