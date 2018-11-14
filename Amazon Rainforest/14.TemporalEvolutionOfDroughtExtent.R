@@ -8,9 +8,9 @@ colNames = c("speiTrmm03", "cwd_preTrmm_et100_r_monthlySd", "cwd_preTrmm_aet_r_m
                  "spiCru03", "cwd_aet_petCru_r_monthlySd",  "cwd_preCru_aetAvg_r_monthlySd",  "cwd_preCru_petCruAvg_r_monthlySd", "cwd_preCru_petCruAvg_nr_monthlySd")
 
 titles = c("SPEI03_T", "WDfixed_T", "WDaet_T",  "WDpet_T",  "WDpet_T*",
-           "SPI03_T",  "CWD_Pr",  "WDaet_T_", "WDpet_T_", "WDpet_T_*",
+           "SPI03_T",  "CWD_Pr",  "WDaet2_T", "WDpet2_T", "WDpet2_T*",
            "SPEI03_C", "WDfixed_C", "WDaet_C", "WDpet_C", "WDpet_C*",       
-           "SPI03_C", "CWD_Cr", "WDaet_C_", "WDpet_C_", "WDpet_C*_")
+           "SPI03_C", "CWD_Cr", "WDaet2_C", "WDpet2_C", "WDpet2_C*")
 
 droughtLevelsFun <- function(colName = "", title = ""){
   definePalette <- "Reds"
