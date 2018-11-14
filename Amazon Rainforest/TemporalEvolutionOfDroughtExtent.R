@@ -8,13 +8,13 @@ colNames = c("speiTrmm03", "cwd_preTrmm_et100_r_monthlySd", "cwd_preTrmm_aet_r_m
                  "spiCru03", "cwd_aet_petCru_r_monthlySd",  "cwd_preCru_aetAvg_r_monthlySd",  "cwd_preCru_petCruAvg_r_monthlySd", "cwd_preCru_petCruAvg_nr_monthlySd")
 
 titles = c("SPEI03_T", "WDfixed_T", "WDaet_T",  "WDpet_T",  "WDpet_T*",
-           "SPI03_T",  "CWD_Pr",  "WDaet2_T", "WDpet2_T", "WDpet2_T*",
+           "SPI03_T",  "CWD_Pr",  "WDaet_T_", "WDpet_T_", "WDpet_T_*",
            "SPEI03_C", "WDfixed_C", "WDaet_C", "WDpet_C", "WDpet_C*",       
-           "SPI03_C", "CWD_Cr", "WDaet2_C", "WDpet2_C", "WDpet2_C*")
+           "SPI03_C", "CWD_Cr", "WDaet_C_", "WDpet_C_", "WDpet_C*_")
 
 droughtLevelsFun <- function(colName = "", title = ""){
   definePalette <- "Reds"
-  topHline <- list("firebrick", 2, "dashed", 40)
+  topHline <- list("firebrick", 2, "dashed", 50)
   lowHline <- list("chocolate1", 2, "dashed", 20)
   
   severityLevels <- amazonWD[complete.cases(amazonWD),] %>%
@@ -42,7 +42,7 @@ droughtLevelsFun <- function(colName = "", title = ""){
     geom_area(colour="black", size=.2, alpha=.4) +
     scale_fill_brewer(palette=definePalette, direction = -1, breaks=rev(levels(severityLevels$severityLevel))) +
     ggtitle(title) +
-    #geom_hline(yintercept=topHline[[4]], linetype=topHline[[3]], size=topHline[[2]], color = topHline[[1]]) +
+    geom_hline(yintercept=topHline[[4]], linetype=topHline[[3]], size=topHline[[2]], color = topHline[[1]]) +
     labs(y = "Drought extent (in %)") +
     #geom_hline(yintercept=lowHline[[4]], linetype=lowHline[[3]], size=lowHline[[2]], color = lowHline[[1]]) +
     theme(axis.title.y.left = element_text(size = 12),
