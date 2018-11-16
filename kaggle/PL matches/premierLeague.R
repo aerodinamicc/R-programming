@@ -3,6 +3,7 @@ library(ggrepel)
 library(lubridate)
 library(scales)
 library(highcharter)
+library(ggpubr)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -339,7 +340,22 @@ standings %>%
   geom_vline(xintercept = 1995, linetype="dotted", 
                color = "blue", size=1.5) + 
   ggtitle("Champions and runners-up")
-  
 
+#Linear regression rank~points 
+a <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  ggplot(aes(x = factor(rank), y = points)) +
+  geom_boxplot(fill="slateblue", alpha=0.2) +
+  geom_smooth(method='lm', se = FALSE, color = "red")
 
+b <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  ggplot(aes(x = rank, y = points)) +
+  xlab("rank") +
+  geom_point(color = "blue") +
+  geom_smooth(method='lm', se = FALSE, color = "red")
+
+ggarrange(a, b, nrow = 1, ncol = 2)
+
+cor(standings$points, standings$rank)
 
