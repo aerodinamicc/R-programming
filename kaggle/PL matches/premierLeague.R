@@ -366,28 +366,31 @@ b <- standings %>%
 
 ggarrange(a, b, nrow = 1, ncol = 2)
 
-rank <- standings$rank
-points <- standings$points
-
-lmfit <- lm(rank~points)
-
-predict(lmfit, list(points = c(1)))
+# rank <- standings$rank
+# points <- standings$points
+# 
+# lmfit <- lm(rank~points)
+# 
+# predict(lmfit, list(points = c(1)))
 
 cor(standings$points, standings$rank)
 
 #Goals ranking corr ----
+rankColors <- c("darkgoldenrod1", "green", "deepskyblue1", "red2")
 c <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = rank, y = goalsScored, color = finished)) +
   ylab("scored") +
+  scale_color_manual(values = rankColors) +
   geom_point() +
   geom_smooth(method = "lm",  formula = y~poly(x, 2), se = FALSE, color = "blue")
 
 d <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   mutate(goalsConceded = goalsScored - goalDiff) %>%
-  ggplot(aes(x = rank, y = goalsConceded, color = "blue"))  +
+  ggplot(aes(x = rank, y = goalsConceded, color = finished))  +
   ylab("conceded") +
+  scale_color_manual(values = rankColors) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, color = "blue")
 
@@ -395,17 +398,17 @@ e <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = rank, y = goalDiff, color = finished))  +
   ylab("goal difference") +
+  scale_color_manual(values = rankColors) +
   geom_point() +
-  geom_smooth(method = "lm", formula = y~poly(x, 3), se = FALSE, color = "blue") +
-  guides(col = guide_legend())
+  geom_smooth(method = "lm", formula = y~poly(x, 3), se = FALSE, color = "blue")
 
 ggarrange(c, d, e, nrow = 1, ncol = 3)
 
 
 
-gd <- standings$goalDiff
-
-lmgd <- lm(rank~gd)
-
-predict(lmgd, list(gd = c(20)))
+# gd <- standings$goalDiff
+# 
+# lmgd <- lm(rank~gd)
+# 
+# predict(lmgd, list(gd = c(20)))
 
