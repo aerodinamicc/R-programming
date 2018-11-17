@@ -12,6 +12,45 @@ d <- d %>%
   mutate_if(is.factor, as.character) %>%
   mutate(Date = dmy(Date))
 
+#Seasonal points----
+pointsPerSeasonFun <- function(dataset = d, team){
+  d %>%
+    filter(HomeTeam == team | AwayTeam == team) %>%
+    mutate(points = ifelse(HomeTeam == team & FTR == "H", 3,
+                           ifelse(AwayTeam == team & FTR == "A", 3,
+                                  ifelse(FTR== "D", 1, 0))),
+           goalDiff = ifelse(HomeTeam == team, FTHG - FTAG, FTAG - FTHG),
+           goalsScored = ifelse(HomeTeam == team, FTHG, FTAG),
+           team = team) %>%
+    group_by(Season, team) %>%
+    summarise(points = sum(points), goalDiff = sum(goalDiff), goalsScored = sum(goalsScored)) %>%
+    select(Season, team,points, goalsScored, goalDiff)
+}
+
+teams <- unique(d$HomeTeam)
+
+#PPS stands for points per season
+pps <- data.frame()
+pps <- pps %>%
+  mutate(Season = as.character(NA),
+         team = as.character(NA),
+         points = as.numeric(NA),
+         goalsScored = as.numeric(NA),
+         goalDiff = as.numeric(NA))
+
+
+for (team in teams) {
+  teamsPointsPerSeason <- pointsPerSeasonFun(team = team)
+  pps <- pps %>% bind_rows(teamsPointsPerSeason)
+}
+
+#Seasonal standings----
+standings <- pps %>%
+  group_by(Season) %>%
+  arrange(Season, desc(points), desc(goalDiff), desc(goalsScored)) %>%
+  mutate(rank = row_number(Season),
+         goalsConceded = goalsScored - goalDiff)
+
 #Number of seasons in the PL----
 fiveSeasons <- list("firebrick", 2, "dashed", 5)
 tenSeasons <- list("chocolate3", 2, "dashed", 10)
@@ -273,44 +312,6 @@ undefeatedDat %>%
 
 
 
-#Seasonal points----
-pointsPerSeasonFun <- function(dataset = d, team){
-  d %>%
-    filter(HomeTeam == team | AwayTeam == team) %>%
-    mutate(points = ifelse(HomeTeam == team & FTR == "H", 3,
-                           ifelse(AwayTeam == team & FTR == "A", 3,
-                                  ifelse(FTR== "D", 1, 0))),
-           goalDiff = ifelse(HomeTeam == team, FTHG - FTAG, FTAG - FTHG),
-           goalsScored = ifelse(HomeTeam == team, FTHG, FTAG),
-           team = team) %>%
-    group_by(Season, team) %>%
-    summarise(points = sum(points), goalDiff = sum(goalDiff), goalsScored = sum(goalsScored)) %>%
-    select(Season, team,points, goalsScored, goalDiff)
-}
-
-teams <- unique(d$HomeTeam)
-
-#PPS stands for points per season
-pps <- data.frame()
-pps <- pps %>%
-  mutate(Season = as.character(NA),
-         team = as.character(NA),
-         points = as.numeric(NA),
-         goalsScored = as.numeric(NA),
-         goalDiff = as.numeric(NA))
-
-
-for (team in teams) {
-  teamsPointsPerSeason <- pointsPerSeasonFun(team = team)
-  pps <- pps %>% bind_rows(teamsPointsPerSeason)
-}
-
-#Seasonal standings----
-standings <- pps %>%
-  group_by(Season) %>%
-  arrange(Season, desc(points), desc(goalDiff), desc(goalsScored)) %>%
-  mutate(rank = row_number(Season))
-
 #Titles----
 
 standings %>%
@@ -341,21 +342,70 @@ standings %>%
                color = "blue", size=1.5) + 
   ggtitle("Champions and runners-up")
 
-#Linear regression rank~points 
+#Testing -----
+standings <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  mutate(finished = ifelse(rank < 5, "1-4",
+                           ifelse(rank < 10, "5-10",
+                                  ifelse(rank < 18, "11-17", "18-20"))),
+         finished = factor(finished, c("1-4", "5-10", "11-17", "18-20")))
+
+
+
+#Linear regression rank~points ----
 a <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = factor(rank), y = points)) +
-  geom_boxplot(fill="slateblue", alpha=0.2) +
-  geom_smooth(method='lm', se = FALSE, color = "red")
+  geom_boxplot(fill="slateblue", alpha=0.2)
 
 b <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = rank, y = points)) +
-  xlab("rank") +
   geom_point(color = "blue") +
-  geom_smooth(method='lm', se = FALSE, color = "red")
+  stat_smooth(method="lm", se = FALSE, formula= y~poly(x, 3), colour="red")
 
 ggarrange(a, b, nrow = 1, ncol = 2)
 
+rank <- standings$rank
+points <- standings$points
+
+lmfit <- lm(rank~points)
+
+predict(lmfit, list(points = c(1)))
+
 cor(standings$points, standings$rank)
+
+#Goals ranking corr ----
+c <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  ggplot(aes(x = rank, y = goalsScored, color = finished)) +
+  ylab("scored") +
+  geom_point() +
+  geom_smooth(method = "lm",  formula = y~poly(x, 2), se = FALSE, color = "blue")
+
+d <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  mutate(goalsConceded = goalsScored - goalDiff) %>%
+  ggplot(aes(x = rank, y = goalsConceded, color = "blue"))  +
+  ylab("conceded") +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue")
+
+e <- standings %>%
+  filter(Season != "1993-94" & Season != "1994-95") %>%
+  ggplot(aes(x = rank, y = goalDiff, color = finished))  +
+  ylab("goal difference") +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y~poly(x, 3), se = FALSE, color = "blue") +
+  guides(col = guide_legend())
+
+ggarrange(c, d, e, nrow = 1, ncol = 3)
+
+
+
+gd <- standings$goalDiff
+
+lmgd <- lm(rank~gd)
+
+predict(lmgd, list(gd = c(20)))
 
