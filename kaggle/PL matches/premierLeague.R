@@ -342,7 +342,7 @@ standings %>%
                color = "blue", size=1.5) + 
   ggtitle("Champions and runners-up")
 
-#Testing -----
+#Regression lines ----
 standings <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   mutate(finished = ifelse(rank < 5, "1-4",
@@ -350,40 +350,44 @@ standings <- standings %>%
                                   ifelse(rank < 18, "11-17", "18-20"))),
          finished = factor(finished, c("1-4", "5-10", "11-17", "18-20")))
 
+rankColors <- c("darkgoldenrod1", "green", "deepskyblue1", "red2")
 
-
-#Linear regression rank~points ----
 a <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = factor(rank), y = points)) +
-  geom_boxplot(fill="slateblue", alpha=0.2)
+  geom_boxplot(fill="slateblue", alpha=0.2)+
+  ggtitle("Boxplots of all ranks") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14))
 
 b <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
-  ggplot(aes(x = rank, y = points)) +
-  geom_point(color = "blue") +
-  stat_smooth(method="lm", se = FALSE, formula= y~poly(x, 3), colour="red")
+  ggplot(aes(x = rank, y = points, color = finished)) +
+  scale_color_manual(values = rankColors) +
+  geom_point() +
+  stat_smooth(method="lm", se = FALSE, formula= y~poly(x, 3), colour="blue")+
+  ggtitle("Cubic regression curve between rank and points") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14))
 
 ggarrange(a, b, nrow = 1, ncol = 2)
 
-# rank <- standings$rank
-# points <- standings$points
-# 
-# lmfit <- lm(rank~points)
-# 
-# predict(lmfit, list(points = c(1)))
-
-cor(standings$points, standings$rank)
-
-#Goals ranking corr ----
-rankColors <- c("darkgoldenrod1", "green", "deepskyblue1", "red2")
 c <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
   ggplot(aes(x = rank, y = goalsScored, color = finished)) +
   ylab("scored") +
   scale_color_manual(values = rankColors) +
   geom_point() +
-  geom_smooth(method = "lm",  formula = y~poly(x, 2), se = FALSE, color = "blue")
+  geom_smooth(method = "lm",  formula = y~poly(x, 2), se = FALSE, color = "blue") +
+  ggtitle("Quadratic regression curve between rank and scored goals") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14))
 
 d <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
@@ -392,7 +396,12 @@ d <- standings %>%
   ylab("conceded") +
   scale_color_manual(values = rankColors) +
   geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue")
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  ggtitle("Linear regression line between rank and conceded goals") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14))
 
 e <- standings %>%
   filter(Season != "1993-94" & Season != "1994-95") %>%
@@ -400,15 +409,42 @@ e <- standings %>%
   ylab("goal difference") +
   scale_color_manual(values = rankColors) +
   geom_point() +
-  geom_smooth(method = "lm", formula = y~poly(x, 3), se = FALSE, color = "blue")
+  geom_smooth(method = "lm", formula = y~poly(x, 3), se = FALSE, color = "blue") +
+  ggtitle("Cubic regression curve between rank and goal difference") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14))
 
 ggarrange(c, d, e, nrow = 1, ncol = 3)
 
+gd <- standings$goalDiff
+rank <- standings$rank
+lmgd <- lm(gd~poly(rank, 3))
 
+gdPred <- predict(lmgd, list(rank = seq(1:20)))
 
-# gd <- standings$goalDiff
-# 
-# lmgd <- lm(rank~gd)
-# 
-# predict(lmgd, list(gd = c(20)))
+points <- standings$points
 
+lmpoints <- lm(points~poly(rank, 3))
+pointsPred <- predict(lmpoints, list(rank = seq(1:20)))
+
+predictions <- tibble(rank = seq(1:20), "Goal difference" = gdPred, "Points" = pointsPred)
+
+predictions %>%
+  gather(var, value, 2:3) %>%
+  ggplot(aes(x = rank, y = value, color = var)) +
+  geom_point() +
+  scale_y_continuous(breaks = round(seq(-30, 80, by = 10),1)) +
+  geom_line() +
+  ggtitle("Cubic regression curve of points and goal difference vs ranking of a team") +
+  theme(axis.text.x.bottom = element_text(size = 12),
+        axis.title.x.bottom = element_text(size = 14),
+        axis.text.y.left = element_text(size = 12),
+        axis.title.y.left = element_text(size = 14)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = 40, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = 50, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = 70, linetype = "dashed", color = "black")
+
+  
