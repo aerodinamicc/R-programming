@@ -1,12 +1,3 @@
----
-title: "Black Friday insights"
-output: 
-  html_document:
-    toc: true # table of content true
-    toc_depth: 3
-    keep_md: yes
----
-
 Hey, guys! Today we look at the Black Friday data. Let's dive and see what is in store for us.
 
 
