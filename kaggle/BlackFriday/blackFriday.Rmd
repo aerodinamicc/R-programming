@@ -340,7 +340,7 @@ The most prominent category is the one of customers living for no more than an y
 That's just my guess though. I'm curious to see what is yours.
 
 #Conslusions
-* school students in city C buy more stuff than those in other cities
+* School students in city C buy more stuff than those in other cities
 * Most popular categories by far are 5 and 8 followed by 1. In addition, the latter generates highest revenue for the company.
 * There are pronounced customer gender patterns in some age groups in city A
 * City C sees less sales not because of the lack of customers but rather because on average they buy much less products than in other cities.
