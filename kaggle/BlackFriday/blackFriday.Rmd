@@ -1,4 +1,16 @@
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+---
+title: "Black Friday insights"
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_depth: 3
+    keep_md: yes
+---
+
+Hey, guys! Today we look at the Black Friday data. Let's dive and see what is in store for us.
+
+```{r readIn, echo=TRUE, message=FALSE, warning=FALSE}
+
 
 library(tidyverse)
 library(ggrepel)
@@ -14,18 +26,28 @@ b_cat <- b%>%
   gather(product_cat, category, c("Product_Category_1", "Product_Category_2", "Product_Category_3")) %>%
   select(-product_cat) %>%
   filter(!is.na(category))
+```
 
+#Who said the data is totally incognito?!
+
+Let's look at what we have for the occupation of customers.
+
+```{r occupation, echo=FALSE}
 #Occupation among ages of the customers----
-#Based on that we can assume occupation 10 is student and 4 university student
-#7 is also interesting but no clue what could it be
 b %>%  group_by(User_ID) %>%
   filter(row_number(User_ID) == 1) %>%
   group_by(Age, Occupation) %>%
   summarise(occupationCount = n()) %>%
   ggplot(aes(x = Occupation, y = occupationCount)) +
-  geom_area(color = "lightblue") +
+  geom_area(fill = "royalblue") +
   facet_grid(Age~.)
+```
 
+Based on these results we could assume that occupation 10 is School and 4 - College/University. Occupation 10 is most widespread among 0-17 years old customers whereas, occupation 4 - among 18-25 and than 26-35 age group.
+
+Next on we look at the preferences of both occupation groups(4 and 10) in regards to product categories:
+
+```{r occupation4and10, echo=FALSE, fig.width = 9, fig.height= 8}
 student_customers_count <- b_cat %>%
   group_by(User_ID, Occupation, City_Category, category) %>%
   filter(Occupation %in% c(4, 10)) %>%
@@ -42,49 +64,53 @@ student_customers_count %>%
   geom_bar(stat = "identity", position = position_dodge()) +
   facet_wrap(City_Category~.) +
   ggtitle("Total items bought by occupation 4 and 10 across categories and cities")
+```
 
-#Prices----
-#Mean price per product in different cities
-#City C has relatively higher mean price per sold product
+It appears that students (at school) buy much less products than university students in  city A, In contrast to city C where the former have more buying power.
 
+#Where is it most expensive or do people buy more expensive stuff there?
+
+The next figure represents the mean price per purchase across the three cities.
+
+```{r prices, echo=FALSE, fig.width=5, fig.height = 5}
 b %>%
   group_by(City_Category)%>%
   summarise(mean_price_per_product = mean(Purchase)) %>%
   ggplot(aes(x = City_Category, y = mean_price_per_product)) +
-  geom_bar(stat="identity", fill = "lightblue")
+  geom_bar(stat="identity", fill = "royalblue")
+```
 
-#Products----
-#Most populat products
-b %>%
-  group_by(Product_ID) %>%
-  summarise(sold = n()) %>%
-  arrange(-sold)
+The figure highlights that city C has slightly higher mean price per sale, which could lead to the idea that either it sells more expensive products, or the prices are just higher.
 
-#Most expensive products
-b %>%
-  group_by(Purchase) %>%
-  summarise(count = n()) %>%
-  arrange(-count)
+#Most popular categories
 
-#Product category presents an interesting feature of the sold products. Each product could fall in up to 3 categories----
-#Most products are in categories 1,5,8
-#NB! Some product can have just one category and other up to 3, so if a product falling into 3 categories is very well bought that could distort the results
+Product category presents an interesting feature of the sold products. Each product could fall in up to 3 categories. 
+NB! Some product can have just one category and others up to 3, so if a product falling into 3 categories is very well bought that could distort the results
+
+```{r categories, echo=FALSE, fig.width = 9, fig.height= 8}
 ggarrange(
 b %>%
   group_by(Product_Category_1) %>%
   summarise(catCount = n()) %>%
   ggplot(aes(x = Product_Category_1, y = catCount))+
   geom_bar(stat = "identity", fill = "royalblue") +
-  ggtitle("Category count taking only Product_category_1 into account"),
+  ggtitle("Category count taking only\nProduct_category_1 into account"),
 b_cat %>%
   group_by(category) %>%
   summarise(catCount = n()) %>%
   ggplot(aes(x = category, y = catCount))+
   geom_bar(stat = "identity", fill = "royalblue") +
-  ggtitle("Category count taking all categories (1,2,3) into account"),
+  ggtitle("Category count taking all\ncategories (1,2,3) into account"),
 ncol = 2)
+```
 
-#Most of the customers are (78% are in the 18-45 age category)
+Clearly the most popular products are the ones falling into 1, 5 and 8 categories. In addition it seems as categories 12-18 (especially 14-16) are somewhat secondary (meantioned in either Product_Category_2 or Product_Category_3).
+
+#Gender patterns
+
+Let's observe whether there's any clear pattern in terms of the gender of the consumers.
+
+```{r gender, echo=FALSE, fig.width = 9, fig.height = 7}
 ggarrange(
   b %>%
     group_by(Age, Gender, City_Category) %>%
@@ -105,12 +131,22 @@ ggarrange(
     ungroup() %>%
     select(-M, -F) %>%
     ggplot(aes(x = Age, y = men_women_ratio)) +
-    geom_bar(stat = "identity", position = position_dodge()) +
+    geom_bar(stat = "identity", position = position_dodge(), fill = "royalblue") +
     facet_wrap(City_Category~.) +
     ggtitle("M/F customers ratio across cities") +
     theme(axis.text.x.bottom = element_text(angle = 90)),
   ncol = 2)
+```
 
+Considering the left figure it seems that most of the customer are in the 18-45 Age group. Approximatelly 40 % of all purchases have been made by people from the 25-36 group. A peculiar difference between city A and C is that the latter sees rather more sales in the 46+ age groups. On the other hand, city B had more than 40 % of all sales.
+
+In regards to the figure on the right is represents a ratio of Male versus Female customers in an attempt to identify whether either has certain consumption patterns related to age. Despite the lack of widespread pattern it is worth noting that the in city A man in 46-50 and 55+ seemed to buy more often than women as compared to other age groups. In contrast, in the 0-17 age group female customers were more than male.
+
+#Categories across ages as percentage of all sales
+
+Next on we observe whether there's any preference of any age group to certain category. Percentages of all bought items per age group are used as they are more fair than absolute values.
+
+```{r categoriesAcrossAges, echo=FALSE}
 b_cat %>%
   group_by(Age) %>%
   summarise(total_categoryCount_per_age_group = n()) -> categories_per_age_group
@@ -124,21 +160,36 @@ b_cat %>%
   summarise(catCount = n()) %>%
   mutate(percentage = catCount/total_categoryCount_per_age_group*100) %>%
   ggplot(aes(x = category, y = percentage))+
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", fill = "royalblue") +
   ylab("Percentage of all products") +
   facet_grid(Age~.)
+```
 
-#Most expensive categories/Most money spent on categories----
+No clear patterns are presented here. Nevertheless it seems products from categories 3 and 4 are being better accepted by the 0-17 age group.
+
+#Highest revenue categories
+
+Here we have the division of revenue by categories of goods.
+
+```{r highestRevenueCategories, echo=FALSE}
 b_cat %>%
   group_by(category) %>%
   summarise(spent_per_category = sum(Purchase)) -> spent_per_category
 
 spent_per_category %>%
   ggplot(aes(x = category, y = spent_per_category/1000000000)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", fill = "royalblue") +
   ylab("Total purchases per categories (in billions, *10^9)") +
   ggtitle("Most purchased categories")
+```
 
+Category 1 leads the race with a "slight" lead over 5 and 8.
+
+#Mean price of bought products across categories
+
+That is another way of assessing the categories as their popularity does not tell it all.
+
+```{r meanPriceAcrossCategories, echo=FALSE}
 #1, 2, 6, 7 and 10 seem to have the highest spent/sales ratio
 #5 and 8 and the other hand, which seem to be the most popular, have a rather low spent/sales ratio
 b_cat %>%
@@ -147,19 +198,32 @@ b_cat %>%
   left_join(spent_per_category, by = "category") %>%
   mutate(spent_sales_ratio = spent_per_category/total_sales_per_category) %>%
   ggplot() +
-  geom_bar(stat = "identity", aes(x = category, y = spent_sales_ratio)) +
+  geom_bar(stat = "identity", aes(x = category, y = spent_sales_ratio), fill = "royalblue") +
   ggtitle("Purchase/sales ratio across categories")
+```
 
-#Purchases----
-#purchase histogram vs city
-#There are 2 more distinct regions 7-9K and 15-17K
+Here we see that two of the most popular categories 5 and 8 have a relatively low mean price. On the other hand category 1 seems to be the more expensive in regards to mean product price.
+
+#Product prices
+
+Next we look at the frequency count of different product prices across the three cities.
+
+```{r productPrices, echo=FALSE}
 b %>%
   select(Purchase, City_Category) %>%
   ggplot() +
-  geom_histogram(aes(x = Purchase), bins = 24) +
-  facet_wrap(City_Category~.)
+  geom_histogram(aes(x = Purchase), bins = 24, fill = "royalblue") +
+  facet_wrap(City_Category~.) +
+  theme(axis.text.x.bottom = element_text(angle = 90))
+```
 
-#The line highlights 15000 purchases
+There are 2 interesting spikes:
+* in the 7-9K range;
+* in the 15-17K range.
+
+We look at there in the next figure.
+
+```{r priceSpikes, echo=FALSE}
 plot_linetype <- list(15000, "dashed", "orange", 2)
 
 aplot <- b_cat %>%
@@ -167,7 +231,7 @@ aplot <- b_cat %>%
   group_by(category) %>%
   summarise(catCount = n()) %>%
   ggplot(aes(x = category, y = catCount)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", fill = "royalblue") +
   geom_hline(yintercept = plot_linetype[[1]], linetype = plot_linetype[[2]],
              color = plot_linetype[[3]], size = plot_linetype[[4]]) +
   ggtitle("Sales count in the 7-9K range")
@@ -177,21 +241,21 @@ bplot <- b_cat %>%
   group_by(category, Age) %>%
   summarise(catCount = n()) %>%
   ggplot(aes(x = category, y = catCount)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", fill = "royalblue") +
   geom_hline(yintercept = plot_linetype[[1]], linetype = plot_linetype[[2]],
              color = plot_linetype[[3]], size = plot_linetype[[4]]) +
   ggtitle("Sales count in the 15-17K range")
 
 ggarrange(aplot, bplot, nrow = 1, ncol = 2, common.legend = TRUE)
+```
 
-#Average items and spendings across Age
-b %>%
-  group_by(User_ID, Age) %>%
-  summarise(products_bought = n(), purchase = sum(Purchase)) %>%
-  group_by(Age) %>%
-  summarise(mean_products_bought = round(mean(products_bought, na.rm = TRUE), 0),
-            mean_products_price = mean(purchase, na.rm = TRUE))
+It now becomes clear that the 5 and 8 categories could be the most popular, but even though 1 is not as popular it twice more expensive.
 
+#Average number of bought items across cities
+
+The following figure consists of 4 parts. In practice if you multiply the 1st to the 2nd you will get the 3rd. The last one(bottom right) is a more general one.
+
+```{r salesPerAgeAndCity, echo=FALSE}
 #Customers and number of sales vs cities
 #There is much less number of customers in A and B than in city C
 customer_count_per_city <- b %>%  
@@ -251,18 +315,33 @@ ggarrange(
               size=8) +
     ggtitle("Number of sales in the three cities"),
   nrow = 2, ncol = 2, common.legend = TRUE)
+```
 
-#Age vs stays in the city since
-#Interesting that a significant amount of the customers are staying in the city for 1 year now, could be that the store is relevant for newcomers
+City C sees less sales not because of the lack of customers but rather because on average they buy much less products than in other cities.
+
+#Stay in the city
+
+Let's look at how the number of customer is influenced by the duration of stay in the city across age groups.
+
+```{r stayInTheCity, echo=FALSE}
 b %>%  
   group_by(User_ID) %>%
   filter(row_number(User_ID) == 1) %>%
   group_by(Age, Stay_In_Current_City_Years, City_Category) %>%
-  summarise(count = n()) %>%
-  ggplot(aes(Age, count, fill = Stay_In_Current_City_Years)) +
+  summarise(customer_count = n()) %>%
+  ggplot(aes(Age, customer_count, fill = Stay_In_Current_City_Years)) +
   geom_bar(stat = "identity", position = position_dodge()) +
-  facet_wrap(City_Category~.)
+  facet_wrap(City_Category~.) +
+  theme(axis.text.x.bottom = element_text(angle = 90))
+```
 
-#Gender, Marital status and categories
+The most prominent category is the one of customers living for no more than an year in this city. Together with the fact the most clients are aged 25-36 it somehow leads me to the idea that the store itself could be selling furniture.
 
-#Age and marital status
+That's just my guess though. I'm curious to see what is yours.
+
+#Conslusions
+* school students in city C buy more stuff than those in other cities
+* Most popular categories by far are 5 and 8 followed by 1. In addition, the latter generates highest revenue for the company.
+* There are pronounced customer gender patterns in some age groups in city A
+* City C sees less sales not because of the lack of customers but rather because on average they buy much less products than in other cities.
+* The most prominent stay-in-the-city group is of customers living for no more than an year in the city in question.
