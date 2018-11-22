@@ -26,6 +26,23 @@ b %>%  group_by(User_ID) %>%
   geom_area(color = "lightblue") +
   facet_grid(Age~.)
 
+student_customers_count <- b_cat %>%
+  group_by(User_ID, Occupation, City_Category, category) %>%
+  filter(Occupation %in% c(4, 10)) %>%
+  summarise(total_items_bought = n()) %>%
+  group_by(City_Category, Occupation, category) %>%
+  summarise(total_items_bought = sum(total_items_bought)) %>%
+  ungroup() %>%
+  mutate(Occupation = ifelse(Occupation == 4, "4 - supposedly University/College", "10 - supposedly School"),
+         Occupation = factor(Occupation)) %>%
+  arrange(Occupation, City_Category, category)
+
+student_customers_count %>%
+  ggplot(aes(x = category, y = total_items_bought, fill = Occupation)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(City_Category~.) +
+  ggtitle("Total items bought by occupation 4 and 10 across categories and cities")
+
 #Prices----
 #Mean price per product in different cities
 #City C has relatively higher mean price per sold product
@@ -68,13 +85,29 @@ b_cat %>%
 ncol = 2)
 
 #Most of the customers are (78% are in the 18-45 age category)
-b %>%
-  group_by(Age, Gender) %>%
-  summarise(count = n(),
-            percentage = round(n()/nrow(b)*100, 0)) %>%
-  ggplot(aes(x = Age, y = percentage, fill = Gender)) +
-  geom_bar(stat = "identity") +
-  ylab("Percentage of total purchases")
+ggarrange(
+  b %>%
+    group_by(Age, Gender, City_Category) %>%
+    summarise(count = n(),
+              percentage = round(n()/nrow(b)*100, 1)) %>%
+    ggplot(aes(x = Age, y = percentage, fill = Gender)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(City_Category~.) +
+    ylab("Percentage of total purchases") +
+    ggtitle("Age and gender profile of customers across cities"),
+  
+  b %>%
+    group_by(Age, Gender, City_Category) %>%
+    summarise(count = n()) %>%
+    spread(Gender, count) %>%
+    mutate(men_women_ratio = M/F) %>%
+    ungroup() %>%
+    select(-M, -F) %>%
+    ggplot(aes(x = Age, y = men_women_ratio)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    facet_wrap(City_Category~.) +
+    ggtitle("M/F customers ratio across cities"),
+  ncol = 2)
 
 b_cat %>%
   group_by(Age) %>%
