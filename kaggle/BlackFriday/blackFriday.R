@@ -6,6 +6,7 @@ library(lubridate)
 library(scales)
 library(highcharter)
 library(ggpubr)
+library(circlize)
 
 b <- read_csv("BlackFriday.csv")
 sapply(b, function(x) sum(is.na(x)))
@@ -271,48 +272,113 @@ b %>%
 b_users <- b %>%
   group_by(User_ID, Age, Gender, Marital_Status, Occupation, City_Category) %>%
   summarise(av_purchase = mean(Purchase),
-            med_pucharse = median(Purchase),
             sum_purchase = sum(Purchase),
-            products_bought = n())
+            products_bought = n()) %>%
+  ungroup() %>%
+  mutate(Age = factor(Age),
+         Occupation = factor(Occupation),
+         Gender = factor(Gender),
+         City_Category = factor(City_Category))
  #There are 5891 customers
 
-age <- factor(b_users$Age)
-gender <- factor(b_users$Gender)
-occupation <- factor(b_users$Occupation)
-marital_status <- factor(b_users$Marital_Status)
-city_category <- factor(b_users$City_Category)
+#Gender
 
-predicted <- b_users %>%
-  group_by(Age, City_Category, Gender) %>%
-  summarise(predicted_sum = n(), predicted_av_purchase = n(), predicted_items_bought = n())
+ggarrange(
+  b_users %>%
+    ggplot(aes(x = factor(Age), y = products_bought, fill = Gender)) +
+    geom_boxplot(aes(middle = mean(products_bought))) +
+    facet_wrap(City_Category~.),
+  
+  b_users %>%
+    ggplot(aes(Age, y = av_purchase, fill = Gender)) +
+    geom_boxplot(aes(middle = mean(av_purchase))) +
+    facet_wrap(City_Category~.),
+  
+  b_users %>%
+    ggplot(aes(Age, y = sum_purchase, fill = Gender)) +
+    geom_boxplot(aes(middle = mean(sum_purchase))) +
+    facet_wrap(City_Category~.),
+  nrow = 3, common.legend = TRUE)
 
-sum_purchase_model <- lm(formula = b_users$sum_purchase ~ age + city_category + gender)
-predicted$predicted_sum <- predict(sum_purchase_model, list(age = x$Age,
-                                                            city_category = x$City_Category,
-                                                            gender = x$Gender))
+#Occupation
+b_users_occupation <- b_users %>%
+  group_by(Age, City_Category, Occupation) %>%
+  summarise(av_purchase = mean(av_purchase),
+            sum_purchase = sum(sum_purchase),
+            products_bought = sum(products_bought))
 
-av_purchase_model <- lm(formula = b_users$av_purchase ~ age + city_category + gender)
-predicted$predicted_av_purchase <- predict(av_purchase_model, list(age = x$Age,
-                                                                   city_category = x$City_Category,
-                                                                   gender = x$Gender))
+ggarrange(
+  b_users %>%
+    group_by(User_ID) %>%
+    filter(row_number(User_ID) == 1) %>%
+    group_by(City_Category, Age, Occupation) %>%
+    summarise(customers = n()) %>%
+    ggplot(aes(x = Occupation, y = customers, fill = Age)) +
+    scale_fill_brewer(palette = "Set1") +
+    geom_bar(stat = "identity", position = position_stack()) +
+    facet_wrap(City_Category~.) +
+    ggtitle("Number of customers across age, cities and occupation")+
+    theme(plot.title = element_text(hjust = 0.5)),
+  
+  b_users_occupation %>%
+    ggplot(aes(x = Occupation, y = products_bought, fill = Age)) +
+    geom_bar(stat = "identity", position = position_stack(vjust = 0.5)) +
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(City_Category~.) +
+    ggtitle("Products bought across age, cities and occupation")+
+    theme(plot.title = element_text(hjust = 0.5)),
+  
+  b_users_occupation %>%
+    ggplot(aes(x = Occupation, y = av_purchase, fill = Age)) +
+    geom_bar(stat = "identity", position = position_stack(vjust = 0.5)) +
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(City_Category~.) +
+    ggtitle("Average price per bought item across age, cities and occupation")+
+    theme(plot.title = element_text(hjust = 0.5)),
+  
+  b_users_occupation %>%
+    ggplot(aes(x = Occupation, y = sum_purchase, fill = Age)) +
+    geom_bar(stat = "identity", position = position_stack(vjust = 0.5)) +
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(City_Category~.) +
+    ggtitle("Total paid by customer across age, cities and occupation")+
+    theme(plot.title = element_text(hjust = 0.5)),
+nrow = 4, common.legend = TRUE)
 
-bought_products_model <- lm(formula = b_users$products_bought ~ age + city_category + gender)
-predicted$predicted_items_bought <- predict(bought_products_model, list(age = x$Age,
-                                    city_category = x$City_Category,
-                                    gender = x$Gender))
+#Model taking occupation into account
+predictedOccupation <- b_users_occupation %>%
+  group_by(Age, Occupation, City_Category)%>%
+  summarise(av_purchase = NA,
+            sum_purchase = NA,
+            products_bought = NA) %>%
+  ungroup() %>%
+  mutate(Age = factor(Age),
+         Occupation = factor(Occupation),
+         City_Category = factor(City_Category))
 
-b_users %>%
-  ggplot(aes(Age, y = products_bought, fill = Gender)) +
-  geom_boxplot() +
-  facet_wrap(City_Category~.)
+age <- b_users_occupation$Age
+city_category <- b_users_occupation$City_Category
+occupation <- b_users_occupation$Occupation
 
-b_users %>%
-  ggplot(aes(Age, y = av_purchase, fill = Gender)) +
-  geom_boxplot() +
-  facet_wrap(City_Category~.)
+items_occupation_model <- lm(formula = b_users_occupation$products_bought ~ age + city_category + occupation)
+predictedOccupation$products_bought <- predict(items_occupation_model, list(age = predictedOccupation$Age,
+                                                                            occupation = predictedOccupation$Occupation,
+                                                                            city_category = predictedOccupation$City_Category))
 
-b_users %>%
-  ggplot(aes(Age, y = sum_purchase, fill = Gender)) +
-  geom_boxplot() +
-  facet_wrap(City_Category~.)
+ggarrange(
+  predictedOccupation %>%
+  ggplot(aes(x = Occupation, y = products_bought, fill = Age)) +
+  geom_bar(stat = "identity", position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette = "Set1") +
+  facet_wrap(City_Category~.),
+  
+  b_users_occupation %>%
+    ggplot(aes(x = Occupation, y = products_bought, fill = Age)) +
+    geom_bar(stat = "identity", position = position_stack(vjust = 0.5)) +
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(City_Category~.) +
+    ggtitle("Products bought across age, cities and occupation")+
+    theme(plot.title = element_text(hjust = 0.5)),
+  nrow = 2, common.legend = TRUE)
+
 
