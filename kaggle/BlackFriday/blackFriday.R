@@ -266,3 +266,53 @@ b %>%
 #Gender, Marital status and categories
 
 #Age and marital status
+
+#NEW STUFF AFTER PUBLISHING
+b_users <- b %>%
+  group_by(User_ID, Age, Gender, Marital_Status, Occupation, City_Category) %>%
+  summarise(av_purchase = mean(Purchase),
+            med_pucharse = median(Purchase),
+            sum_purchase = sum(Purchase),
+            products_bought = n())
+ #There are 5891 customers
+
+age <- factor(b_users$Age)
+gender <- factor(b_users$Gender)
+occupation <- factor(b_users$Occupation)
+marital_status <- factor(b_users$Marital_Status)
+city_category <- factor(b_users$City_Category)
+
+predicted <- b_users %>%
+  group_by(Age, City_Category, Gender) %>%
+  summarise(predicted_sum = n(), predicted_av_purchase = n(), predicted_items_bought = n())
+
+sum_purchase_model <- lm(formula = b_users$sum_purchase ~ age + city_category + gender)
+predicted$predicted_sum <- predict(sum_purchase_model, list(age = x$Age,
+                                                            city_category = x$City_Category,
+                                                            gender = x$Gender))
+
+av_purchase_model <- lm(formula = b_users$av_purchase ~ age + city_category + gender)
+predicted$predicted_av_purchase <- predict(av_purchase_model, list(age = x$Age,
+                                                                   city_category = x$City_Category,
+                                                                   gender = x$Gender))
+
+bought_products_model <- lm(formula = b_users$products_bought ~ age + city_category + gender)
+predicted$predicted_items_bought <- predict(bought_products_model, list(age = x$Age,
+                                    city_category = x$City_Category,
+                                    gender = x$Gender))
+
+b_users %>%
+  ggplot(aes(Age, y = products_bought, fill = Gender)) +
+  geom_boxplot() +
+  facet_wrap(City_Category~.)
+
+b_users %>%
+  ggplot(aes(Age, y = av_purchase, fill = Gender)) +
+  geom_boxplot() +
+  facet_wrap(City_Category~.)
+
+b_users %>%
+  ggplot(aes(Age, y = sum_purchase, fill = Gender)) +
+  geom_boxplot() +
+  facet_wrap(City_Category~.)
+
