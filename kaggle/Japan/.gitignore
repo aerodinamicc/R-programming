@@ -1,6 +1,20 @@
 ﻿# User-specific files
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
 gm-jpn-all_u_2/
+gm-jpn-all_u_2_1/   
+gm-jpn-all_u_2_2/
+gm-jpn-bnd_u_2/
+gm-jpn-bnd_u_2_1/
+gm-jpn-el_u_1_0/
+gm-jpn-el_u_1_1/
+gm-jpn-hydro_u_2/
+gm-jpn-lc_u_1_0/
+gm-jpn-lc_u_1_1/
+gm-jpn-lu_u_1_0/
+gm-jpn-lu_u_1_1/
+gm-jpn-pop_u_2/
+gm-jpn-trans_u_2/
+gm-jpn-trans_u_2_1/
+gm-jpn-trans_u_2_2/
+gm-jpn-ve_u_1_0/
+gm-jpn-ve_u_1_1/
+hostels/
