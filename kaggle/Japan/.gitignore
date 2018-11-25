@@ -1,0 +1,6 @@
+﻿# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+gm-jpn-all_u_2/
