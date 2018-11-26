@@ -1,6 +1,6 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-#install.packages(c("tidyverse", "ggrepel", "lubridate", "maptools", "ggpubr", "ggmap", "leaflet", "rgdal", "raster"))
+install.packages(c("tidyverse", "ggrepel", "lubridate", "maptools", "ggpubr", "ggmap", "leaflet", "rgdal", "raster"))
 
 library(tidyverse)
 library(ggrepel)
@@ -11,10 +11,11 @@ library(ggmap)
 library(leaflet)
 library(rgdal)
 library(raster)
+library(sf)
 
 hostels <- read_csv("hostels/Hostel.csv") %>% dplyr::select(-`X1`)
 
-#SHP points
+#Airports points
 setwd("gm-jpn-all_u_2/gm-jpn-all_u_2")
 area <- readOGR("airp_jpn.shp")
 
@@ -106,3 +107,41 @@ leaflet() %>%
               popup = paste0(dens_pop$laa, ", ", round(dens_pop$density, 0), " people per square kilometer"),
               popupOptions = popupOptions(closeOnClick = TRUE)) %>%
   addMarkers(lng=cities$lon, lat=cities$lat, popup=cities$City)
+
+
+
+#2016 data
+#V 2.2
+
+dir("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/", pattern = ".shp")
+
+bnd <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/polbnda_jpn.shp")
+rails <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/raill_jpn.shp")
+roads <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/roadl_jpn.shp")
+
+dir("gm-jpn-lu_u_1_1/gm-jpn-lu_u_1_1/jpn")
+
+#Those classifications are from 2006
+#V 1.1
+lu <- raster('gm-jpn-lu_u_1_1/gm-jpn-lu_u_1_1/jpn/lu.tif')
+lc <- raster('gm-jpn-lc_u_1_1/gm-jpn-lc_u_1_1/jpn/lc.tif')
+
+plot(lu)
+
+bnd <- as(bnd, Class = "Spatial")
+roads <- as(roads, Class = "Spatial")
+
+#Build up area files are no good
+
+leaflet() %>%
+  addTiles() %>% #urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png"
+  addPolylines(data = roads) %>%
+  addPolygons(data = bnd, color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("YlOrRd", pop)(pop),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=as.character(bnd$pop),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
+int = gIntersects(roads, bnd)
