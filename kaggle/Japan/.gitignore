@@ -18,4 +18,8 @@ gm-jpn-trans_u_2_2/
 gm-jpn-ve_u_1_0/
 gm-jpn-ve_u_1_1/
 hostels/
-Japan_population_data.csv
+*.dbf
+*.prj
+*.shp
+*.shx
+*.csv
