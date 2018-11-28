@@ -14,32 +14,26 @@ library(raster)
 library(sf)
 library(stringr)
 
-#old----
-hostels <- read_csv("hostels/Hostel.csv") %>% dplyr::select(-`X1`)
-
-#Hostels
-cities <- hostels %>%
-  separate(Distance, c("distance", "from"), "km ") %>%
-  mutate(distance = as.numeric(distance)) %>%
-  arrange(City, `distance`) %>%
-  group_by(City) %>%
-  filter(row_number(City) == 2) %>%
-  ungroup() %>%
-  dplyr::select(City, lon, lat)
-
 #2016 data----
 #V 2.2
 
 dir("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/", pattern = ".shp")
 
 bnd <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/polbnda_jpn.shp")
+
+prefectures <- bnd %>%
+  dplyr::select(nam, laa) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
 bnd <- bnd %>%
   filter(pop > 0) %>%
   group_by(laa) %>%
   summarise(pop = sum(pop))
+
 rails <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/raill_jpn.shp")
 roads <- read_sf("gm-jpn-all_u_2_1/gm-jpn-all_u_2_1/roadl_jpn.shp")
-airport <- st_read("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/airp_jpn.shp")
+airport <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/airp_jpn.shp")
 
 dir("gm-jpn-lu_u_1_1/gm-jpn-lu_u_1_1/jpn")
 
@@ -69,38 +63,23 @@ roads_length <- roads %>%
 bnd_joined <- bnd %>%
   left_join(tracks_length, by = "laa") %>%
   left_join(roads_length, by = "laa") %>%
-  mutate(area_sqkm = st_area(geometry) / 100000, # 10 000 goes for sq km
+  mutate(area_sqkm = st_area(geometry) / 1000000, # 1 000 000 goes for sq km
          pop_dens = pop / area_sqkm,
          rails_per_sqkm = tracks_length / area_sqkm,
          roads_per_sqkm = roads_length / area_sqkm,
          road_rail_ratio = round(roads_per_sqkm / rails_per_sqkm, 1))
 
-#Plotting ----
-bnd_sp <- as(bnd_joined, "Spatial")
-
-leaflet() %>%
-  addTiles() %>%
-  addPolygons(data = bnd_sp, 
-              color = "#444444", weight = 1, smoothFactor = 0.5,
-              opacity = 1.0, fillOpacity = 0.7,
-              fillColor = ~colorQuantile("YlOrRd", roads_per_sqkm)(roads_per_sqkm),
-              highlightOptions = highlightOptions(color = "white", weight = 2,
-                                                  bringToFront = TRUE),
-              popup=as.character(bnd$pop),
-              popupOptions = popupOptions(closeOnClick = TRUE))
-
-#Raster cropping----
+#Raster cropping aka LULC addition----
 bnd_joined <- bnd_joined %>%
-  mutate(cat10 = NA,
-         cat20 = NA,
-         cat30 = NA,
-         cat40 = NA,
-         cat50 = NA,
-         cat60 = NA,
-         cat70 = NA,
-         cat80 = NA,
-         cat90 = NA,
-         buildup = NA)
+  mutate(forest = NA,
+         mixture = NA,
+         grassland = NA,
+         ariculture = NA,
+         wetland = NA,
+         barren = NA,
+         buildup = NA,
+         water = NA,
+         ocean = NA)
 
 for (row in 1:nrow(bnd_joined)) {
   slice <- as(bnd_joined[row,], "Spatial")
@@ -110,29 +89,114 @@ for (row in 1:nrow(bnd_joined)) {
     dplyr::select(cat = lu, ID) %>%
     group_by(cat) %>%
     summarise(percentage = round(n()/nrow(ext_lu)*100 , 2)) %>%
-    mutate(cat = paste0("cat", cat)) %>%
     spread(cat, percentage)
+  
+  lu_classes <- c("forest", "mixture", "grassland", "agriculture", "wetland",
+                  "barren", "buildup", "water", "ocean")
   
   for (cat in names(ext_lu)) {
-    bnd_joined[row, cat] <- as.numeric(ext_lu[cat])
-  }
-  
-  ext_lc <- raster::extract(lc, slice, df = TRUE)
-  
-  ext_lc <- ext_lc %>%
-    dplyr::select(cat = lc, ID) %>%
-    group_by(cat) %>%
-    summarise(percentage = round(n()/nrow(ext_lc)*100 , 2)) %>%
-    mutate(cat = paste0("cat", cat)) %>%
-    spread(cat, percentage)
-  
-  if ("cat13" %in% names(ext_lc)) {
-    bnd_joined[row, "buildup"] <- as.numeric(ext_lc["cat13"])
+    bnd_joined[row, lu_classes[cat/10]] <- as.numeric(ext_lu[cat])
   }
 }
 
-st_write(bnd_joined, dsn = "extended_bnd.shp")
+#st_write(bnd_joined, dsn = "extended_bnd.shp")
 
+#bnd_joined <- read_sf("extended_bnd.shp")
+
+bnd_joined <- bnd_joined %>%
+  mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
+         urban_density = round(pop / urban_sqkm, 2))
+
+#All good but the classification does not come in very handy
+nrow(bnd_joined %>% filter(is.na(buildup)))
+
+#Where are the cities----
+nrow(bnd_joined %>% filter(buildup > 10))
+hist(bnd_joined$buildup)
+urbanised <- bnd_joined %>%
+  filter(buildup > 20)
+
+
+#Plotting ----
+
+#Population leaflet----
+leaflet(bnd_joined) %>%
+  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("YlOrRd", pop)(pop),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste(as.character(bnd_joined$pop), bnd_joined$laa, sep = ", "),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
+#Urban density in municipalities with more than 10% build-up area----
+leaflet(urbanised) %>%
+  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("YlOrRd", urban_density)(urban_density),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste(as.character(urbanised$urban_density), urbanised$laa, sep = ", "),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
+#Green municipalities ---- This need further though, if I'm gonna show green spaces better present a base map
+bnd_joined <- bnd_joined %>%
+  mutate(natural = ifelse(is.na(agriculture) & is.na(buildup), 100,
+                          ifelse(is.na(agriculture), 100 - buildup, 
+                                 ifelse(is.na(buildup), 0,  100))))
+
+leaflet(bnd_joined) %>%
+  addTiles() %>% #urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png"
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("RdYlGn", natural)(natural),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste0(bnd_joined$laa,
+                           ", ",
+                           as.character(bnd_joined$natural),
+                           "% natural LU classes"),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
+#Transport hubs----
+bnd_joined <- bnd_joined %>%
+  mutate(transportation = ifelse(is.na(rails_per_sqkm) & is.na(roads_per_sqkm), 0,
+                                 ifelse(is.na(rails_per_sqkm), roads_per_sqkm, rails_per_sqkm)))
+
+leaflet(bnd_joined) %>%
+  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("YlGnBu", transportation)(transportation),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste0(bnd_joined$laa,
+                           ", ",
+                           as.character(bnd_joined$transportation),
+                           " km of roads and rails per sq km"),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
+
+#Earthquakes
+eq <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
+  mutate(date = ymd_hms(time),
+         year = year(time),
+         month = month(time),
+         day = day(time)) %>%
+  dplyr::select(year, month, day, longitude, latitude, mag)
+
+sp1 <- SpatialPoints(eq)
+sf1 <- st_as_sf(sp1)
+
+eq_sf <- bnd %>%
+  left_join(sp1) %>%
+  group_by(laa) %>%
+  summarise(eqs = n())
+
+leaflet(sp1) %>%
+  addMarkers(lng = eq$longitude, lat = eq$latitude)
 #bnd_joined %>% gather(category, percentage, c("cat10":"cat90")) %>% filter(!is.na(percentage)) %>% group_by(laa) %>% summarise(n = n())
 
 #Two main ways to describe CRS in R are an epsg code or a proj4string

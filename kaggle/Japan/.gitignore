@@ -23,3 +23,6 @@ hostels/
 *.shp
 *.shx
 *.csv
+*.rmd
+*.html
+Japan_cache/
