@@ -1,16 +1,4 @@
----
-title: "EPL historical data"
-output: 
-  html_document:
-    toc: true # table of content true
-    toc_depth: 3
-    keep_md: yes
----
-
-
-Hey, guys!
-
-Here's my EDA on the PL fixtures. From them I also derived the seasonal standings. Have a look below and see what I found.
+Here's an EDA on the PL fixtures. From them I also derived the seasonal standings. Have a look below and see what I found.
 
 
 ```

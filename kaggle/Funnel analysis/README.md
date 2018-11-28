@@ -1,14 +1,4 @@
----
-title: "Funnel analysis of data from an e-commerce website"
-output: 
-  html_document:
-    toc: true # table of content true
-    toc_depth: 3
-    keep_md: yes
----
-
-Today we are looking at data from an e-commerce website that is registering the number of visits on each ofits pages (home, search, payment and confirmation).
-
+Here we are looking at data from an e-commerce website that is registering the number of visits on each ofits pages (home, search, payment and confirmation).
 
 ```r
 library(tidyverse)
