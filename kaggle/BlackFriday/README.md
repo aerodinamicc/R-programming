@@ -1,13 +1,4 @@
----
-title: "Black Friday insights"
-output: 
-  html_document:
-    toc: true # table of content true
-    toc_depth: 3
-    keep_md: yes
----
-
-Hey, guys! Today we look at the Black Friday data. Let's dive and see what is in store for us.
+Today we look at the Black Friday data. Let's dive and see what is in store for us.
 
 
 ```r
@@ -167,4 +158,3 @@ In addition to the previous paragraph some more conclusions:
 * City C sees less sales not because of the lack of customers but rather because on average they buy much less products than in other cities
 * The most prominent stay-in-the-city group is of customers living for no more than an year in the city in question
 
-I'm curious to see what do you think of the data.
