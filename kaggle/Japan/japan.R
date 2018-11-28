@@ -14,7 +14,8 @@ library(raster)
 library(sf)
 library(stringr)
 
-#2016 data----
+#Load data----
+#2016 data
 #V 2.2
 
 dir("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/", pattern = ".shp")
@@ -45,6 +46,8 @@ elev <- raster('gm-jpn-el_u_1_1/gm-jpn-el_u_1_1/jpn/el.tif')
 
 # bnd <- as(bnd, Class = "Spatial")
 # roads <- as(roads, Class = "Spatial")
+
+#Data prep----
 
 tracks_length <- rails %>%
   mutate(length = st_length(geometry) / 1000) %>% # /1000 goes for kilemeters
@@ -99,9 +102,9 @@ for (row in 1:nrow(bnd_joined)) {
   }
 }
 
-#st_write(bnd_joined, dsn = "extended_bnd.shp")
+st_write(bnd_joined, dsn = "extended_bnd.shp", quiet = FALSE, factorsAsCharacter = TRUE)
 
-#bnd_joined <- read_sf("extended_bnd.shp")
+bnd_joined <- read_sf("extended_bnd.shp")
 
 bnd_joined <- bnd_joined %>%
   mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
