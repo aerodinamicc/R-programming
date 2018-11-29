@@ -127,28 +127,7 @@ leaflet(bnd) %>%
               popup=paste(as.character(bnd$pop), bnd$laa, sep = ", "),
               popupOptions = popupOptions(closeOnClick = TRUE))
 
-#Urban density in municipalities with more than 10% build-up area----
-urbanised <- bnd_joined %>%
-  filter(buildup > 20) %>%
-  mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
-         urban_density = round(pop / urban_sqkm, 2)) %>%
-  dplyr::select(buildup, laa, urban_density, urban_sqkm, geometry)
-
-pal <- colorNumeric(
-  palette = "Reds",
-  domain = urbanised$urban_density)
-
-leaflet(urbanised) %>%
-  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
-  addPolygons(weight = 1, smoothFactor = 0.5,
-              opacity = 1.0, fillOpacity = 0.7,
-              color = ~pal(urban_density),
-              highlightOptions = highlightOptions(color = "white", weight = 2,
-                                                  bringToFront = TRUE),
-              popup=paste(as.character(urbanised$urban_density), urbanised$laa, sep = ", "),
-              popupOptions = popupOptions(closeOnClick = TRUE))
-
-#Green municipalities ---- This need further though, if I'm gonna show green spaces better present a base map
+#Green municipalities ---- 
 bnd_joined <- bnd_joined %>%
   mutate(natural = ifelse(is.na(agriculture) & is.na(buildup), 100,
                           ifelse(is.na(agriculture), 100 - buildup, 
@@ -185,6 +164,25 @@ leaflet(bnd_joined) %>%
                            " km of roads and rails per sq km"),
               popupOptions = popupOptions(closeOnClick = TRUE))
 
+#Urban density in municipalities with more than 10% build-up area----
+urban <- bnd_joined %>%
+  mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
+         urban_density = round(pop / urban_sqkm, 0)) %>%
+  filter(buildup > 20)
+
+binpal <- colorBin("OrRd", urban$urban_density, 6, pretty = TRUE)
+
+leaflet() %>%
+  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png",
+           options = providerTileOptions(minZoom = 5, maxZoom = 10)) %>%
+  addPolygons(data = urban, color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~binpal(urban_density),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste(as.character(urban$urban_density), urban$laa, sep = ", "),
+              popupOptions = popupOptions(closeOnClick = TRUE))
+
 
 #Earthquakes
 eq <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
@@ -192,7 +190,25 @@ eq <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
          year = year(time),
          month = month(time),
          day = day(time)) %>%
-  dplyr::select(year, month, day, longitude, latitude, mag)
+  dplyr::select(year, month, day, longitude, latitude, mag) %>%
+  arrange(longitude, latitude)
+
+eq <- st_as_sf(x = eq, 
+                        coords = c("longitude", "latitude"),
+                        crs = "+proj=longlat +datum=WGS84") #
+
+bnd_joined_tr <- st_transform(bnd_joined, 4326)
+
+eq_sf <- eq  %>%
+  st_join(bnd_joined_tr, join = st_intersects) %>%
+  group_by(laa) %>%
+  summarise(earthquakes_count = n(),
+            mean_mag = mean(mag),
+            max_mag = max(mag)) %>%
+  filter(!is.na(laa))
+
+#EQ on Japanese land since 2001
+sum(eq_sf$earthquakes_count)
 
 sp1 <- SpatialPoints(eq)
 sf1 <- st_as_sf(sp1)
