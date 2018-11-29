@@ -24,4 +24,5 @@ hostels/
 *.shx
 *.csv
 *.rmd
+*.RData
 Japan_cache/

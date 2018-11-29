@@ -50,14 +50,14 @@ elev <- raster('gm-jpn-el_u_1_1/gm-jpn-el_u_1_1/jpn/el.tif')
 #Data prep----
 
 tracks_length <- rails %>%
-  mutate(length = st_length(geometry) / 1000) %>% # /1000 goes for kilemeters
+  mutate(length = as.numeric(st_length(geometry)) / 1000) %>% # /1000 goes for kilemeters
   st_join(bnd) %>%
   as.data.frame() %>%
   group_by(laa) %>%
   summarise(tracks_length = sum(length))
 
 roads_length <- roads %>%
-  mutate(length = st_length(geometry)/ 1000) %>%
+  mutate(length = as.numeric(st_length(geometry)) / 1000) %>%
   st_join(bnd) %>%
   as.data.frame() %>%
   group_by(laa) %>%
@@ -66,7 +66,7 @@ roads_length <- roads %>%
 bnd_joined <- bnd %>%
   left_join(tracks_length, by = "laa") %>%
   left_join(roads_length, by = "laa") %>%
-  mutate(area_sqkm = st_area(geometry) / 1000000, # 1 000 000 goes for sq km
+  mutate(area_sqkm = as.numeric(st_area(geometry)) / 1000000, # 1 000 000 goes for sq km
          pop_dens = pop / area_sqkm,
          rails_per_sqkm = tracks_length / area_sqkm,
          roads_per_sqkm = roads_length / area_sqkm,
@@ -84,6 +84,8 @@ bnd_joined <- bnd_joined %>%
          water = NA,
          ocean = NA)
 
+categories <- tibble()
+
 for (row in 1:nrow(bnd_joined)) {
   slice <- as(bnd_joined[row,], "Spatial")
   ext_lu <- raster::extract(lu, slice, df = TRUE)
@@ -92,23 +94,18 @@ for (row in 1:nrow(bnd_joined)) {
     dplyr::select(cat = lu, ID) %>%
     group_by(cat) %>%
     summarise(percentage = round(n()/nrow(ext_lu)*100 , 2)) %>%
+    complete(cat = seq(10, 90, 10)) %>%
     spread(cat, percentage)
   
-  lu_classes <- c("forest", "mixture", "grassland", "agriculture", "wetland",
-                  "barren", "buildup", "water", "ocean")
-  
-  for (cat in names(ext_lu)) {
-    bnd_joined[row, lu_classes[cat/10]] <- as.numeric(ext_lu[cat])
-  }
+  categories <- categories %>%
+    rbind(ext_lu)
 }
 
-st_write(bnd_joined, dsn = "extended_bnd.shp", quiet = FALSE, factorsAsCharacter = TRUE)
+bnd_joined[, 10:18] <- categories[,]
 
-bnd_joined <- read_sf("extended_bnd.shp")
+#st_write(bnd_joined, dsn = "extended_bnd.shp", quiet = FALSE, factorsAsCharacter = TRUE)
 
-bnd_joined <- bnd_joined %>%
-  mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
-         urban_density = round(pop / urban_sqkm, 2))
+#bnd_joined <- read_sf("extended_bnd.shp")
 
 #All good but the classification does not come in very handy
 nrow(bnd_joined %>% filter(is.na(buildup)))
@@ -116,29 +113,36 @@ nrow(bnd_joined %>% filter(is.na(buildup)))
 #Where are the cities----
 nrow(bnd_joined %>% filter(buildup > 10))
 hist(bnd_joined$buildup)
-urbanised <- bnd_joined %>%
-  filter(buildup > 20)
-
 
 #Plotting ----
 
 #Population leaflet----
-leaflet(bnd_joined) %>%
+leaflet(bnd) %>%
   addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
   addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
               fillColor = ~colorQuantile("YlOrRd", pop)(pop),
               highlightOptions = highlightOptions(color = "white", weight = 2,
                                                   bringToFront = TRUE),
-              popup=paste(as.character(bnd_joined$pop), bnd_joined$laa, sep = ", "),
+              popup=paste(as.character(bnd$pop), bnd$laa, sep = ", "),
               popupOptions = popupOptions(closeOnClick = TRUE))
 
 #Urban density in municipalities with more than 10% build-up area----
+urbanised <- bnd_joined %>%
+  filter(buildup > 20) %>%
+  mutate(urban_sqkm = round(area_sqkm * buildup / 100, 2), #already in sqkm
+         urban_density = round(pop / urban_sqkm, 2)) %>%
+  dplyr::select(buildup, laa, urban_density, urban_sqkm, geometry)
+
+pal <- colorNumeric(
+  palette = "Reds",
+  domain = urbanised$urban_density)
+
 leaflet(urbanised) %>%
   addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
-  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+  addPolygons(weight = 1, smoothFactor = 0.5,
               opacity = 1.0, fillOpacity = 0.7,
-              fillColor = ~colorQuantile("YlOrRd", urban_density)(urban_density),
+              color = ~pal(urban_density),
               highlightOptions = highlightOptions(color = "white", weight = 2,
                                                   bringToFront = TRUE),
               popup=paste(as.character(urbanised$urban_density), urbanised$laa, sep = ", "),
