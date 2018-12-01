@@ -23,9 +23,9 @@ dir("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/", pattern = ".shp")
 bnd <- read_sf("gm-jpn-all_u_2_2/gm-jpn-all_u_2_2/polbnda_jpn.shp")
 
 prefectures <- bnd %>%
-  dplyr::select(nam, laa) %>%
-  as.data.frame() %>%
-  dplyr::select(-geometry)
+  filter(pop > 0) %>%
+  group_by(nam) %>%
+  summarise(pop = sum(pop))
 
 bnd <- bnd %>%
   filter(pop > 0) %>%
@@ -184,28 +184,50 @@ leaflet() %>%
               popupOptions = popupOptions(closeOnClick = TRUE))
 
 
-#Earthquakes
-eq <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
+#Earthquakes----
+eq_input <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
   mutate(date = ymd_hms(time),
          year = year(time),
          month = month(time),
          day = day(time)) %>%
-  dplyr::select(year, month, day, longitude, latitude, mag) %>%
+  dplyr::select(date, year, month, day, longitude, latitude, mag, depth) %>%
   arrange(longitude, latitude)
 
-eq <- st_as_sf(x = eq, 
+eq_input <- st_as_sf(x = eq_input, 
                         coords = c("longitude", "latitude"),
                         crs = "+proj=longlat +datum=WGS84") #
 
-bnd_joined_tr <- st_transform(bnd_joined, 4326)
+prefectures <- st_transform(prefectures, 4326)
 
-eq_sf <- eq  %>%
-  st_join(bnd_joined_tr, join = st_intersects) %>%
-  group_by(laa) %>%
+eq_pref <- eq_input  %>%
+  st_join(prefectures, join = st_intersects) %>%
+  filter(!is.na(nam))
+  
+eq_pref_df <- eq_pref %>%
+  group_by(nam) %>%
   summarise(earthquakes_count = n(),
-            mean_mag = mean(mag),
             max_mag = max(mag)) %>%
-  filter(!is.na(laa))
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+prefectures <- prefectures %>%
+  left_join(eq_pref_df, by = "nam")
+
+eq_pref %>% group_by(nam) %>%
+  ggplot(aes(x = nam, y = depth)) +
+  geom_boxplot() +
+  theme(axis.text.x.bottom = element_text(angle = 90))
+
+#Plot quakes ----
+leaflet(prefectures) %>%
+  addTiles(urlTemplate = "//stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png") %>%
+  addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+              opacity = 1.0, fillOpacity = 0.7,
+              fillColor = ~colorQuantile("YlOrRd", max_mag)(max_mag),
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                  bringToFront = TRUE),
+              popup=paste(as.character(prefectures$max_mag), prefectures$nam, sep = ", "),
+              popupOptions = popupOptions(closeOnClick = TRUE))
 
 #EQ on Japanese land since 2001
 sum(eq_sf$earthquakes_count)
