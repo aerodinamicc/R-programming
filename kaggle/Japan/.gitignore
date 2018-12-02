@@ -26,3 +26,4 @@ hostels/
 *.rmd
 *.RData
 Japan_cache/
+sf_intro.R
