@@ -191,6 +191,8 @@ eq_highMag <- eq_input %>%
   filter(mag > 7)
 
 ### 200km Buffer around Japan
+japan <- st_union(bnd)
+japan_buffer <- st_buffer(japan, 100000)
 
 #Project all the earthquakes
 eq_input <- st_as_sf(x = eq_input, 
