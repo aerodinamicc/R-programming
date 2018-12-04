@@ -199,6 +199,7 @@ eq_input <- st_as_sf(x = eq_input,
                         coords = c("longitude", "latitude"),
                         crs = "+proj=longlat +datum=WGS84") #
 
+
 #WGS84
 prefectures <- st_transform(prefectures, 4326)
 
