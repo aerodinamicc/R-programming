@@ -107,6 +107,22 @@ nrow(bnd_joined %>% filter(is.na(buildup)))
 nrow(bnd_joined %>% filter(buildup > 10))
 hist(bnd_joined$buildup)
 
+spacedNumbers <- function(x)
+{
+  if (x > 999999) {
+    millions <- x %/% 1000000
+    return(paste(millions, x%/%1000 - millions * 1000, x %% 1000, sep = " "))
+  }
+  else if(x > 999){
+    return(paste(x%/%1000, x %% 1000, sep = " "))
+  }
+  else{
+    return(as.character(x))
+  }
+}
+
+bnd_joined[,"laa" == "Koganei Shi"]
+
 #Plotting ----
 
 #Population leaflet----
@@ -117,7 +133,7 @@ leaflet(bnd) %>%
               fillColor = ~colorQuantile("YlOrRd", pop)(pop),
               highlightOptions = highlightOptions(color = "white", weight = 2,
                                                   bringToFront = TRUE),
-              popup=paste(as.character(bnd$pop), bnd$laa, sep = ", "),
+              popup=paste(spacedNumbers(bnd$pop), bnd$laa, sep = ", "),
               popupOptions = popupOptions(closeOnClick = TRUE))
 
 #Green municipalities ---- 
