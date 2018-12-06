@@ -191,6 +191,7 @@ leaflet() %>%
                                                   bringToFront = TRUE),
               popup=paste(as.character(urban$urban_density), urban$laa, sep = ", "),
               popupOptions = popupOptions(closeOnClick = TRUE))
+			  
 
 
 #Earthquakes----
