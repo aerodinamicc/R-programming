@@ -191,8 +191,6 @@ leaflet() %>%
                                                   bringToFront = TRUE),
               popup=paste(as.character(urban$urban_density), urban$laa, sep = ", "),
               popupOptions = popupOptions(closeOnClick = TRUE))
-			  
-
 
 #Earthquakes----
 eq_input <- read_csv("Japan earthquakes 2001 - 2018.csv") %>%
