@@ -232,6 +232,7 @@ eq_pref_df <- eq_pref %>%
 prefectures <- prefectures %>%
   left_join(eq_pref_df, by = "nam")
 
+  
 eq_pref %>% group_by(nam) %>%
   ggplot(aes(x = nam, y = depth)) +
   geom_boxplot() +
